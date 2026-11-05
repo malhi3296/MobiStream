@@ -22,17 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,21 +50,14 @@ import com.example.data.model.Language
 import com.example.domain.FilterOptions
 import com.example.ui.components.ChannelCard
 import com.example.ui.components.FilterBottomSheet
+import com.example.ui.components.MobiStreamUnifiedTopBar
+import com.example.ui.components.SectionHeader
 import com.example.ui.theme.GlowLilac
 import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.MidnightBackground
-import com.example.ui.theme.MidnightCard
-import com.example.ui.theme.MidnightCardBorder
 import com.example.ui.theme.StreamGradientStart
 import com.example.ui.theme.StreamViolet
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextWhite
-
-enum class ExploreTab(val title: String) {
-    GENRE("Genre / Category"),
-    COUNTRY("Country"),
-    LANGUAGE("Language")
-}
+import com.example.ui.theme.TextDarkPrimary
+import com.example.ui.theme.TextDarkSecondary
 
 @Composable
 fun ExploreScreen(
@@ -77,6 +66,9 @@ fun ExploreScreen(
     countries: List<Country>,
     languages: List<Language>,
     filterOptions: FilterOptions,
+    isDarkMode: Boolean,
+    onToggleTheme: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -87,8 +79,8 @@ fun ExploreScreen(
     onApplyFilters: (FilterOptions) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableStateOf(ExploreTab.GENRE) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    val isDark = MaterialTheme.colorScheme.background != Color.White
 
     Box(
         modifier = modifier
@@ -96,259 +88,224 @@ fun ExploreScreen(
             .background(MaterialTheme.colorScheme.background)
             .testTag("explore_screen")
     ) {
-
         Column(modifier = Modifier.fillMaxSize()) {
-            // Screen Header & Search
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            // 1. Unified Top Bar identical to Home page
+            MobiStreamUnifiedTopBar(
+                isDarkMode = isDarkMode,
+                onToggleTheme = onToggleTheme,
+                onSettingsClick = onNavigateToSettings,
+                onFilterClick = { showFilterSheet = true },
+                hasActiveFilters = filterOptions.hasActiveFilters
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Explore & Discover",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
-                            color = TextWhite
-                        )
-                        Text(
-                            text = "Browse channels by country, language & genre",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 12.sp,
-                            color = TextMuted
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { showFilterSheet = true },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(if (filterOptions.hasActiveFilters) StreamViolet else MidnightCard, CircleShape)
-                            .testTag("explore_filter_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Open Filters",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Search field
-                OutlinedTextField(
-                    value = filterOptions.searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    placeholder = {
-                        Text(
-                            text = "Search channels by name, country, genre...",
-                            fontFamily = InterFontFamily,
-                            fontSize = 13.sp,
-                            color = TextMuted
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = GlowLilac,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        if (filterOptions.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { onSearchQueryChange("") }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear",
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MidnightCard,
-                        unfocusedContainerColor = MidnightCard,
-                        focusedBorderColor = StreamGradientStart,
-                        unfocusedBorderColor = MidnightCardBorder,
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        cursorColor = GlowLilac
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("explore_search_input")
-                )
-            }
-
-            // Top Tabs: Genre, Country, Language
-            TabRow(
-                selectedTabIndex = selectedTab.ordinal,
-                containerColor = MidnightBackground,
-                contentColor = GlowLilac,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab.ordinal]),
-                        color = StreamViolet,
-                        height = 3.dp
-                    )
-                },
-                divider = {
+                // 2. Redesigned Search Bar
+                item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(1.dp)
-                            .background(MidnightCardBorder)
-                    )
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = filterOptions.searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            placeholder = {
+                                Text(
+                                    text = "Search channels, live streams, shows...",
+                                    fontFamily = InterFontFamily,
+                                    fontSize = 14.sp,
+                                    color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = if (isDark) GlowLilac else StreamViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                if (filterOptions.searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { onSearchQueryChange("") }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear search",
+                                            tint = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(18.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
+                                unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
+                                focusedBorderColor = StreamViolet,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedTextColor = if (isDark) Color.White else TextDarkPrimary,
+                                unfocusedTextColor = if (isDark) Color.White else TextDarkPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .testTag("explore_search_bar")
+                        )
+                    }
                 }
-            ) {
-                ExploreTab.values().forEach { tab ->
-                    val isSelected = selectedTab == tab
-                    Tab(
-                        selected = isSelected,
-                        onClick = { selectedTab = tab },
-                        text = {
-                            Text(
-                                text = tab.title,
-                                fontFamily = InterFontFamily,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                fontSize = 13.sp,
-                                color = if (isSelected) TextWhite else TextMuted
+
+                // 3. Section 1: Categories (Horizontal scrollable from left to right)
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Categories",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isDark) Color.White else TextDarkPrimary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
+
+                    val categoryList = listOf("All") + categories.map { it.name }.distinct()
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        items(categoryList) { categoryName ->
+                            val isSelected = filterOptions.selectedCategory.equals(categoryName, ignoreCase = true)
+                            ExploreHorizontalCard(
+                                title = categoryName,
+                                isSelected = isSelected,
+                                onClick = { onSetCategory(categoryName) }
                             )
-                        },
-                        modifier = Modifier.testTag("tab_${tab.name.lowercase()}")
+                        }
+                    }
+                }
+
+                // 4. Section 2: Countries (Horizontal scrollable from left to right)
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Countries",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isDark) Color.White else TextDarkPrimary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                     )
-                }
-            }
 
-            // Sub-category filters based on active tab
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-                when (selectedTab) {
-                    ExploreTab.GENRE -> {
-                        val allCats = listOf("All") + categories.map { it.name }.distinct()
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(allCats) { cat ->
-                                val isSelected = filterOptions.selectedCategory.equals(cat, ignoreCase = true)
-                                FilterChip(
-                                    label = cat,
-                                    isSelected = isSelected,
-                                    onClick = { onSetCategory(cat) }
-                                )
-                            }
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        item {
+                            ExploreHorizontalCard(
+                                title = "🌐 All",
+                                isSelected = filterOptions.selectedCountry == "All",
+                                onClick = { onSetCountry("All") }
+                            )
                         }
-                    }
-                    ExploreTab.COUNTRY -> {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            item {
-                                FilterChip(
-                                    label = "🌐 All",
-                                    isSelected = filterOptions.selectedCountry == "All",
-                                    onClick = { onSetCountry("All") }
-                                )
-                            }
-                            items(countries) { country ->
-                                val isSelected = filterOptions.selectedCountry.equals(country.code, ignoreCase = true) ||
-                                        filterOptions.selectedCountry.equals(country.name, ignoreCase = true)
-                                FilterChip(
-                                    label = "${country.flag} ${country.name}",
-                                    isSelected = isSelected,
-                                    onClick = { onSetCountry(country.code) }
-                                )
-                            }
-                        }
-                    }
-                    ExploreTab.LANGUAGE -> {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            item {
-                                FilterChip(
-                                    label = "🌐 All",
-                                    isSelected = filterOptions.selectedLanguage == "All",
-                                    onClick = { onSetLanguage("All") }
-                                )
-                            }
-                            items(languages) { lang ->
-                                val isSelected = filterOptions.selectedLanguage.equals(lang.name, ignoreCase = true)
-                                FilterChip(
-                                    label = lang.name,
-                                    isSelected = isSelected,
-                                    onClick = { onSetLanguage(lang.name) }
-                                )
-                            }
+                        items(countries) { country ->
+                            val isSelected = filterOptions.selectedCountry.equals(country.code, ignoreCase = true) ||
+                                    filterOptions.selectedCountry.equals(country.name, ignoreCase = true)
+                            ExploreHorizontalCard(
+                                title = "${country.flag} ${country.name}",
+                                isSelected = isSelected,
+                                onClick = { onSetCountry(country.code) }
+                            )
                         }
                     }
                 }
-            }
 
-            // Channels Count & Active Filter Indicator
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${channels.size} Channels Found",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = GlowLilac
-                )
+                // 5. Section 3: Languages (Horizontal scrollable from left to right)
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Languages",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isDark) Color.White else TextDarkPrimary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
 
-                if (filterOptions.hasActiveFilters) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        item {
+                            ExploreHorizontalCard(
+                                title = "🌐 All",
+                                isSelected = filterOptions.selectedLanguage == "All",
+                                onClick = { onSetLanguage("All") }
+                            )
+                        }
+                        items(languages) { language ->
+                            val isSelected = filterOptions.selectedLanguage.equals(language.name, ignoreCase = true)
+                            ExploreHorizontalCard(
+                                title = language.name,
+                                isSelected = isSelected,
+                                onClick = { onSetLanguage(language.name) }
+                            )
+                        }
+                    }
+                }
+
+                // 6. Header for Channels Grid
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF281E57))
-                            .clickable { onResetFilters() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Reset Filters",
+                            text = "${channels.size} Channels Found",
                             fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp,
-                            color = Color.White
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = if (isDark) Color.White else TextDarkPrimary
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Reset",
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                }
-            }
 
-            // 2-Column Channels Grid
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp, top = 6.dp)
-            ) {
+                        if (filterOptions.hasActiveFilters) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(StreamViolet)
+                                    .clickable { onResetFilters() }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = "Reset All",
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // 7. Channels Grid (2-column)
                 if (channels.isEmpty()) {
                     item {
                         Column(
@@ -362,14 +319,14 @@ fun ExploreScreen(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = TextWhite
+                                color = if (isDark) Color.White else TextDarkPrimary
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Try selecting another country, genre, or reset filters",
+                                text = "Try selecting different categories, countries or reset filters",
                                 fontFamily = InterFontFamily,
                                 fontSize = 12.sp,
-                                color = TextMuted
+                                color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
                             )
                         }
                     }
@@ -378,7 +335,7 @@ fun ExploreScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                .padding(horizontal = 20.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
@@ -405,6 +362,7 @@ fun ExploreScreen(
             }
         }
 
+        // Filter Bottom Sheet when filter button is clicked
         if (showFilterSheet) {
             FilterBottomSheet(
                 filterOptions = filterOptions,
@@ -419,31 +377,40 @@ fun ExploreScreen(
 }
 
 @Composable
-private fun FilterChip(
-    label: String,
+private fun ExploreHorizontalCard(
+    title: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val chipShape = RoundedCornerShape(12.dp)
+    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val cardShape = RoundedCornerShape(14.dp)
+
     Box(
-        modifier = Modifier
-            .clip(chipShape)
-            .background(if (isSelected) StreamViolet else MidnightCard)
+        modifier = modifier
+            .clip(cardShape)
+            .background(
+                if (isSelected) {
+                    StreamViolet
+                } else {
+                    if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8)
+                }
+            )
             .border(
-                1.dp,
-                if (isSelected) StreamGradientStart else MidnightCardBorder,
-                chipShape
+                width = 1.dp,
+                color = if (isSelected) StreamGradientStart else if (isDark) Color(0xFF2C2266) else Color(0xFFE4E4EE),
+                shape = cardShape
             )
             .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = label,
+            text = title,
             fontFamily = InterFontFamily,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isSelected) Color.White else TextMuted
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+            fontSize = 13.sp,
+            color = if (isSelected) Color.White else if (isDark) Color.White else TextDarkPrimary
         )
     }
 }

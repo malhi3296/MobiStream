@@ -25,11 +25,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.Channel
 import com.example.ui.components.MobiStreamBottomNav
 import com.example.ui.components.NavDestination
+import com.example.ui.components.UserInfoModal
 import com.example.ui.screens.explore.ExploreScreen
 import com.example.ui.screens.favorites.FavoritesScreen
 import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.player.PlayerScreen
-import com.example.ui.screens.search.SearchScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.splash.SplashScreen
 import com.example.ui.theme.MobiStreamTheme
@@ -58,8 +58,9 @@ fun MainMobiStreamApp(
     var screenState by remember { mutableStateOf(ScreenState.SPLASH) }
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var playingChannel by remember { mutableStateOf<Channel?>(null) }
+    var showUserInfoModal by remember { mutableStateOf(false) }
 
-    // Requirement 7: Request runtime permissions on install / first launch
+    // Request runtime location permissions on install/first launch
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -134,18 +135,21 @@ fun MainMobiStreamApp(
                 }
 
                 ScreenState.MAIN -> {
-                    // Back handler: Return to HOME if in sub-tab
                     BackHandler(enabled = currentDestination != NavDestination.HOME) {
                         currentDestination = NavDestination.HOME
                     }
 
                     Scaffold(
                         bottomBar = {
-                            // Requirement 4: 4 tabs: Home, Explore, Favourite, Search
+                            // Menubar with Home, Explore, Favourite, Profile
                             MobiStreamBottomNav(
                                 currentDestination = currentDestination,
                                 onNavigate = { destination ->
-                                    currentDestination = destination
+                                    if (destination == NavDestination.PROFILE) {
+                                        showUserInfoModal = true
+                                    } else {
+                                        currentDestination = destination
+                                    }
                                 }
                             )
                         },
@@ -168,7 +172,9 @@ fun MainMobiStreamApp(
                                         detectedCountryName = uiState.detectedCountryName,
                                         detectedCountryCode = uiState.detectedCountryCode,
                                         filterOptions = uiState.filterOptions,
+                                        isDarkMode = uiState.isDarkMode,
                                         isLoading = uiState.isLoading,
+                                        onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
                                         onSelectChannel = { ch ->
                                             playingChannel = ch
                                             screenState = ScreenState.PLAYER
@@ -198,6 +204,9 @@ fun MainMobiStreamApp(
                                         countries = uiState.availableCountries,
                                         languages = uiState.availableLanguages,
                                         filterOptions = uiState.filterOptions,
+                                        isDarkMode = uiState.isDarkMode,
+                                        onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
+                                        onNavigateToSettings = { screenState = ScreenState.SETTINGS_OVERLAY },
                                         onSelectChannel = { ch ->
                                             playingChannel = ch
                                             screenState = ScreenState.PLAYER
@@ -231,24 +240,22 @@ fun MainMobiStreamApp(
                                     )
                                 }
 
-                                NavDestination.SEARCH -> {
-                                    SearchScreen(
-                                        channels = filteredChannels,
-                                        categories = uiState.availableCategories,
-                                        filterOptions = uiState.filterOptions,
-                                        onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
-                                        onSelectCategory = { cat -> viewModel.setCategoryFilter(cat) },
-                                        onSelectChannel = { ch ->
-                                            playingChannel = ch
-                                            screenState = ScreenState.PLAYER
-                                        },
-                                        onToggleFavorite = { id -> viewModel.toggleFavorite(id) }
-                                    )
+                                NavDestination.PROFILE -> {
+                                    // Profile opens UserInfoModal, fallback to HOME
+                                    currentDestination = NavDestination.HOME
+                                    showUserInfoModal = true
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            // User Info Modal with UPI QR, GitHub, PayPal, and About app
+            if (showUserInfoModal) {
+                UserInfoModal(
+                    onDismiss = { showUserInfoModal = false }
+                )
             }
         }
     }

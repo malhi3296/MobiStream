@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,16 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.InterFontFamily
+import com.example.ui.theme.StreamViolet
 import com.example.ui.theme.TextDarkPrimary
 import com.example.ui.theme.TextDarkSecondary
 
@@ -51,7 +54,7 @@ enum class NavDestination(
     HOME("home", "Home", Icons.Filled.Home, Icons.Outlined.Home),
     EXPLORE("explore", "Explore", Icons.Filled.Explore, Icons.Outlined.Explore),
     FAVOURITE("favourite", "Favourite", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
-    SEARCH("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)
+    PROFILE("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person)
 }
 
 @Composable
@@ -76,15 +79,15 @@ fun MobiStreamBottomNav(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(60.dp)
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .height(62.dp)
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavDestination.values().forEach { destination ->
                 val isSelected = currentDestination == destination
 
-                val activeColor = if (isDark) Color.White else TextDarkPrimary
+                val activeColor = if (isDark) Color.White else StreamViolet
                 val inactiveColor = if (isDark) Color(0xFF8882AF) else TextDarkSecondary
 
                 val iconTint by animateColorAsState(
@@ -101,19 +104,27 @@ fun MobiStreamBottomNav(
                         .testTag("nav_item_${destination.route}")
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { onNavigate(destination) }
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
-                            contentDescription = destination.title,
-                            tint = iconTint,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) StreamViolet.copy(alpha = 0.15f) else Color.Transparent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                                contentDescription = destination.title,
+                                tint = iconTint,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = destination.title,

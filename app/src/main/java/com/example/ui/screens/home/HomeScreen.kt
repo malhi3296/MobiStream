@@ -60,6 +60,8 @@ import com.example.ui.theme.TextDarkPrimary
 import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.viewmodel.SlideShowItem
 
+import com.example.ui.components.MobiStreamUnifiedTopBar
+
 @Composable
 fun HomeScreen(
     slides: List<SlideShowItem>,
@@ -70,7 +72,9 @@ fun HomeScreen(
     detectedCountryName: String,
     detectedCountryCode: String,
     filterOptions: FilterOptions,
+    isDarkMode: Boolean,
     isLoading: Boolean,
+    onToggleTheme: () -> Unit,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onTogglePin: (String) -> Unit,
@@ -101,18 +105,22 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // 1. Requirement 3: Top bar with Settings on top-left, Filter icon on right of it, Logo and MobiStream name
+                // Unified Top Bar: Logo on left, dark/light toggle, settings, and filter on right
                 item {
-                    MobiStreamHomeHeader(
+                    MobiStreamUnifiedTopBar(
+                        isDarkMode = isDarkMode,
+                        onToggleTheme = onToggleTheme,
                         onSettingsClick = onNavigateToSettings,
-                        onFilterClick = { showFilterSheet = true }
+                        onFilterClick = { showFilterSheet = true },
+                        hasActiveFilters = filterOptions.hasActiveFilters
                     )
                 }
 
-                // 2. Requirement 5: Dynamic 5-slide Hero Carousel
+                // Dynamic 5-slide Hero Carousel
                 if (slides.isNotEmpty()) {
                     item {
                         DynamicHeroSlideshow(
+
                             slides = slides,
                             onSlideClick = onSelectChannel
                         )
