@@ -1,16 +1,13 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
@@ -38,13 +35,12 @@ import com.example.ui.theme.StreamViolet
 import com.example.ui.theme.TextDarkPrimary
 
 /**
- * Unified Top Bar for both Home and Explore pages:
+ * Unified Top Bar visible throughout the entire app:
  * - Left top: Logo and MobiStream name
- * - Right:
+ * - Right top (3 clean icons with NO background):
  *   a) Dark/Light mode toggle
  *   b) Settings
  *   c) Filter
- * (No live icon)
  */
 @Composable
 fun MobiStreamUnifiedTopBar(
@@ -56,13 +52,14 @@ fun MobiStreamUnifiedTopBar(
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background != Color.White
-    val iconBgColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF2F3F8)
-    val iconTint = if (isDark) Color.White else TextDarkPrimary
+    // High-contrast icon colors for dark and light mode
+    val defaultIconTint = if (isDark) Color.White else TextDarkPrimary
+    val brandTextColor = if (isDark) Color.White else TextDarkPrimary
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -85,7 +82,7 @@ fun MobiStreamUnifiedTopBar(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
-                    color = if (isDark) Color.White else TextDarkPrimary
+                    color = brandTextColor
                 )
                 Text(
                     text = "Stream",
@@ -98,27 +95,25 @@ fun MobiStreamUnifiedTopBar(
         }
 
         // Right Top Actions:
-        // a) Dark/Light mode toggle
-        // b) Settings icon
-        // c) Filter icon
+        // a) Dark/Light mode toggle (no background)
+        // b) Settings icon (no background)
+        // c) Filter icon (no background)
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // a) Dark/Light mode toggle
             IconButton(
                 onClick = onToggleTheme,
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(iconBgColor)
+                    .size(40.dp)
                     .testTag("topbar_theme_toggle")
             ) {
                 Icon(
                     imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                     contentDescription = if (isDarkMode) "Switch to Light Mode" else "Switch to Dark Mode",
-                    tint = if (isDarkMode) Color(0xFFFFD166) else iconTint,
-                    modifier = Modifier.size(19.dp)
+                    tint = if (isDarkMode) Color(0xFFFFD166) else defaultIconTint,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -126,16 +121,14 @@ fun MobiStreamUnifiedTopBar(
             IconButton(
                 onClick = onSettingsClick,
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(iconBgColor)
+                    .size(40.dp)
                     .testTag("topbar_settings_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Settings",
-                    tint = iconTint,
-                    modifier = Modifier.size(19.dp)
+                    tint = defaultIconTint,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -143,16 +136,14 @@ fun MobiStreamUnifiedTopBar(
             IconButton(
                 onClick = onFilterClick,
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(if (hasActiveFilters) StreamViolet else iconBgColor)
+                    .size(40.dp)
                     .testTag("topbar_filter_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Tune,
                     contentDescription = "Filters",
-                    tint = if (hasActiveFilters) Color.White else iconTint,
-                    modifier = Modifier.size(19.dp)
+                    tint = if (hasActiveFilters) StreamViolet else defaultIconTint,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }

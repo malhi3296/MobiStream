@@ -90,41 +90,59 @@ class ChannelRepository(
 
     suspend fun initializeChannels(forceRefresh: Boolean = false) = withContext(Dispatchers.IO) {
         val count = channelDao.getCount()
-        if (count == 0 || forceRefresh) {
-            if (count == 0) {
-                val seedEntities = SeedChannels.curatedChannels.map { ChannelEntity.fromDomain(it) }
-                channelDao.insertChannels(seedEntities)
-            }
+        if (count == 0) {
+            val seedEntities = SeedChannels.curatedChannels.map { ChannelEntity.fromDomain(it) }
+            channelDao.insertChannels(seedEntities)
+        }
+        if (count < 5000 || forceRefresh) {
             fetchRemotePlaylists()
         }
     }
 
     private suspend fun fetchRemotePlaylists() = withContext(Dispatchers.IO) {
+        // Fetch all 11k+ channels directly from master index.m3u
+        val masterPlaylistUrl = "https://iptv-org.github.io/iptv/index.m3u"
+        var loadedCount = 0
+
+        try {
+            val response = apiService.fetchPlaylist(masterPlaylistUrl)
+            response.byteStream().use { stream ->
+                M3uParser.parseStream(stream, batchSize = 500) { batch ->
+                    val entities = batch.map { ChannelEntity.fromDomain(it) }
+                    channelDao.insertChannels(entities)
+                    loadedCount += entities.size
+                }
+            }
+        } catch (e: Exception) {
+            // If master fails, fallback to individual category playlists
+            fetchCategoryPlaylistsFallback()
+        }
+    }
+
+    private suspend fun fetchCategoryPlaylistsFallback() = withContext(Dispatchers.IO) {
         val playlistEndpoints = listOf(
             "https://iptv-org.github.io/iptv/categories/sports.m3u" to "Sports",
             "https://iptv-org.github.io/iptv/categories/news.m3u" to "News",
             "https://iptv-org.github.io/iptv/categories/movies.m3u" to "Movies",
             "https://iptv-org.github.io/iptv/categories/music.m3u" to "Music",
-            "https://iptv-org.github.io/iptv/categories/animation.m3u" to "Kids",
-            "https://iptv-org.github.io/iptv/categories/entertainment.m3u" to "Entertainment"
+            "https://iptv-org.github.io/iptv/categories/animation.m3u" to "Animation",
+            "https://iptv-org.github.io/iptv/categories/entertainment.m3u" to "Entertainment",
+            "https://iptv-org.github.io/iptv/categories/comedy.m3u" to "Comedy",
+            "https://iptv-org.github.io/iptv/categories/documentary.m3u" to "Documentary"
         )
-
-        val fetchedChannels = mutableListOf<Channel>()
 
         for ((url, cat) in playlistEndpoints) {
             try {
                 val response = apiService.fetchPlaylist(url)
                 val m3uString = response.string()
                 val parsed = M3uParser.parse(m3uString, defaultCategory = cat)
-                fetchedChannels.addAll(parsed.take(40))
+                if (parsed.isNotEmpty()) {
+                    val entities = parsed.map { ChannelEntity.fromDomain(it) }
+                    channelDao.insertChannels(entities)
+                }
             } catch (e: Exception) {
-                // Ignore single playlist failure and continue
+                // Continue with next
             }
-        }
-
-        if (fetchedChannels.isNotEmpty()) {
-            val entities = fetchedChannels.map { ChannelEntity.fromDomain(it) }
-            channelDao.insertChannels(entities)
         }
     }
 
@@ -147,14 +165,12 @@ class ChannelRepository(
     }
 
     fun detectDeviceCountry(): Pair<String, String> {
-        // Check saved country preference first
         val savedCode = preferences.detectedCountryCode
         val savedName = preferences.detectedCountryName
         if (savedCode.isNotBlank() && savedName.isNotBlank()) {
             return savedCode to savedName
         }
 
-        // Try TelephonyManager (SIM/Network country)
         val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
         val simCountry = tm?.simCountryIso?.uppercase(Locale.US)
         val networkCountry = tm?.networkCountryIso?.uppercase(Locale.US)
@@ -176,7 +192,11 @@ class ChannelRepository(
     suspend fun getAvailableCategories(): List<Category> = withContext(Dispatchers.IO) {
         val channels = channelDao.getAllChannels().first()
         val grouped = channels.groupBy { it.category }
-        val predefinedOrder = listOf("Sports", "News", "Movies", "Series", "Music", "Kids", "Documentary", "Entertainment")
+        val predefinedOrder = listOf(
+            "Sports", "News", "Movies", "Series", "Music", "Animation",
+            "Kids", "Documentary", "Comedy", "Entertainment", "Education",
+            "Auto", "Business", "Lifestyle", "Science", "Travel"
+        )
 
         val result = mutableListOf<Category>()
         for (cat in predefinedOrder) {
@@ -186,7 +206,7 @@ class ChannelRepository(
             }
         }
         for ((cat, list) in grouped) {
-            if (cat !in predefinedOrder && list.isNotEmpty()) {
+            if (cat !in predefinedOrder && list.isNotEmpty() && cat != "Undefined") {
                 result.add(Category(id = cat.lowercase(), name = cat, channelCount = list.size))
             }
         }
@@ -196,23 +216,30 @@ class ChannelRepository(
     suspend fun getAvailableCountries(): List<Country> = withContext(Dispatchers.IO) {
         val channels = channelDao.getAllChannels().first()
         channels.groupBy { it.countryCode to it.country }
-            .map { (key, _) ->
+            .map { (key, list) ->
                 Country(
                     code = key.first,
                     name = key.second,
-                    flag = getCountryEmoji(key.first)
+                    flag = getCountryEmoji(key.first),
+                    channelCount = list.size
                 )
             }
-            .sortedBy { it.name }
+            .filter { it.name.isNotBlank() && it.code != "INT" }
+            .sortedByDescending { it.channelCount }
     }
 
     suspend fun getAvailableLanguages(): List<Language> = withContext(Dispatchers.IO) {
         val channels = channelDao.getAllChannels().first()
-        channels.map { it.language }
-            .distinct()
-            .filter { it.isNotBlank() }
-            .sorted()
-            .map { Language(code = it.lowercase().take(2), name = it) }
+        channels.groupBy { it.language }
+            .filter { it.key.isNotBlank() }
+            .map { (lang, list) ->
+                Language(
+                    code = lang.lowercase().take(2),
+                    name = lang,
+                    channelCount = list.size
+                )
+            }
+            .sortedByDescending { it.channelCount }
     }
 
     private fun getCountryEmoji(countryCode: String): String {

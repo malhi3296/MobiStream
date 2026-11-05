@@ -28,6 +28,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -54,10 +55,10 @@ import com.example.ui.theme.InterFontFamily
 import com.example.ui.theme.MidnightBackground
 import com.example.ui.theme.MidnightCard
 import com.example.ui.theme.MidnightCardBorder
-import com.example.ui.theme.StreamGradientEnd
 import com.example.ui.theme.StreamGradientStart
-import com.example.ui.theme.StreamPrimaryGradient
 import com.example.ui.theme.StreamViolet
+import com.example.ui.theme.TextDarkPrimary
+import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
@@ -73,6 +74,12 @@ fun FilterBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val isDark = MaterialTheme.colorScheme.background != Color.White
+
+    val containerBg = if (isDark) MidnightBackground else Color.White
+    val titleTextColor = if (isDark) TextWhite else TextDarkPrimary
+    val sectionHeaderColor = if (isDark) GlowLilac else StreamViolet
+    val closeIconTint = if (isDark) TextMuted else TextDarkSecondary
 
     var tempCategory by remember { mutableStateOf(filterOptions.selectedCategory) }
     var tempCountry by remember { mutableStateOf(filterOptions.selectedCountry) }
@@ -82,7 +89,7 @@ fun FilterBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MidnightBackground,
+        containerColor = containerBg,
         dragHandle = null,
         modifier = modifier.testTag("filter_bottom_sheet")
     ) {
@@ -103,7 +110,7 @@ fun FilterBottomSheet(
                     Icon(
                         imageVector = Icons.Default.FilterAlt,
                         contentDescription = null,
-                        tint = GlowLilac,
+                        tint = sectionHeaderColor,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -112,27 +119,27 @@ fun FilterBottomSheet(
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = TextWhite
+                        color = titleTextColor
                     )
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = TextMuted
+                        tint = closeIconTint
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. Categories Filter
+            // 1. Categories Filter (Requirement: "only use Category instead of genre/category")
             Text(
-                text = "Genre / Category",
+                text = "Category",
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                color = GlowLilac
+                color = sectionHeaderColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(
@@ -146,6 +153,7 @@ fun FilterBottomSheet(
                     FilterChipItem(
                         text = cat,
                         isSelected = isSelected,
+                        isDark = isDark,
                         onClick = { tempCategory = cat }
                     )
                 }
@@ -155,11 +163,11 @@ fun FilterBottomSheet(
 
             // 2. Country Filter
             Text(
-                text = "Country / Region",
+                text = "Country",
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                color = GlowLilac
+                color = sectionHeaderColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(
@@ -170,6 +178,7 @@ fun FilterBottomSheet(
                 FilterChipItem(
                     text = "🌐 All Countries",
                     isSelected = tempCountry == "All",
+                    isDark = isDark,
                     onClick = { tempCountry = "All" }
                 )
                 countries.take(16).forEach { country ->
@@ -178,6 +187,7 @@ fun FilterBottomSheet(
                     FilterChipItem(
                         text = "${country.flag} ${country.name}",
                         isSelected = isSelected,
+                        isDark = isDark,
                         onClick = { tempCountry = country.code }
                     )
                 }
@@ -191,7 +201,7 @@ fun FilterBottomSheet(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                color = GlowLilac
+                color = sectionHeaderColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(
@@ -199,13 +209,19 @@ fun FilterBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val allLangs = listOf("All") + languages.map { it.name }.distinct()
-                allLangs.take(10).forEach { lang ->
-                    val isSelected = tempLanguage.equals(lang, ignoreCase = true)
+                FilterChipItem(
+                    text = "🌐 All Languages",
+                    isSelected = tempLanguage == "All",
+                    isDark = isDark,
+                    onClick = { tempLanguage = "All" }
+                )
+                languages.take(12).forEach { lang ->
+                    val isSelected = tempLanguage.equals(lang.name, ignoreCase = true)
                     FilterChipItem(
-                        text = lang,
+                        text = lang.name,
                         isSelected = isSelected,
-                        onClick = { tempLanguage = lang }
+                        isDark = isDark,
+                        onClick = { tempLanguage = lang.name }
                     )
                 }
             }
@@ -218,7 +234,7 @@ fun FilterBottomSheet(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                color = GlowLilac
+                color = sectionHeaderColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(
@@ -227,10 +243,11 @@ fun FilterBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 listOf("All", "4K", "FHD", "HD").forEach { q ->
-                    val isSelected = tempQuality.equals(q, ignoreCase = true)
+                    val isSelected = tempQuality == q
                     FilterChipItem(
                         text = q,
                         isSelected = isSelected,
+                        isDark = isDark,
                         onClick = { tempQuality = q }
                     )
                 }
@@ -238,7 +255,7 @@ fun FilterBottomSheet(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Action Buttons
+            // Bottom Actions: Reset & Apply
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -250,26 +267,21 @@ fun FilterBottomSheet(
                         tempLanguage = "All"
                         tempQuality = "All"
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = TextMuted
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("reset_filters_button")
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(16.dp),
+                        tint = sectionHeaderColor
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Reset",
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        color = sectionHeaderColor
                     )
                 }
 
@@ -285,26 +297,20 @@ fun FilterBottomSheet(
                         )
                         onDismiss()
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.weight(1.5f),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = StreamViolet
-                    ),
-                    modifier = Modifier
-                        .weight(2f)
-                        .height(48.dp)
-                        .testTag("apply_filters_button")
+                    )
                 ) {
                     Text(
                         text = "Apply Filters",
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -313,29 +319,38 @@ fun FilterBottomSheet(
 private fun FilterChipItem(
     text: String,
     isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    isDark: Boolean,
+    onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(12.dp)
+    val background = if (isSelected) {
+        StreamViolet
+    } else {
+        if (isDark) MidnightCard else Color(0xFFF1F2F8)
+    }
+    val textColor = if (isSelected) {
+        Color.White
+    } else {
+        if (isDark) TextMuted else TextDarkPrimary
+    }
+    val borderColor = if (isSelected) StreamGradientStart else if (isDark) MidnightCardBorder else Color(0xFFE2E4EE)
+
     Box(
-        modifier = modifier
+        modifier = Modifier
             .clip(shape)
-            .background(if (isSelected) StreamViolet else MidnightCard)
-            .border(
-                width = 1.dp,
-                color = if (isSelected) StreamGradientStart else MidnightCardBorder,
-                shape = shape
-            )
+            .background(background)
+            .border(1.dp, borderColor, shape)
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .testTag("filter_chip_$text"),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             fontFamily = InterFontFamily,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isSelected) Color.White else TextMuted
+            fontSize = 13.sp,
+            color = textColor
         )
     }
 }

@@ -47,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -57,11 +56,12 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.GlowLilac
 import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.MidnightBackground
 import com.example.ui.theme.MidnightCard
 import com.example.ui.theme.MidnightCardBorder
 import com.example.ui.theme.StreamGradientStart
 import com.example.ui.theme.StreamViolet
+import com.example.ui.theme.TextDarkPrimary
+import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
@@ -77,6 +77,14 @@ fun SettingsScreen(
     val context = LocalContext.current
     var cacheClearedMessage by remember { mutableStateOf(false) }
 
+    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val titleTextColor = if (isDark) TextWhite else TextDarkPrimary
+    val subtitleTextColor = if (isDark) TextMuted else TextDarkSecondary
+    val cardBg = if (isDark) MidnightCard else Color(0xFFF6F7FC)
+    val cardBorder = if (isDark) MidnightCardBorder else Color(0xFFE2E4EE)
+    val innerOptionBg = if (isDark) Color(0xFF130E30) else Color(0xFFECEEF7)
+    val iconBoxBg = if (isDark) Color(0xFF281E57) else Color(0xFFEFE9FE)
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -87,7 +95,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             // Header
@@ -96,22 +104,22 @@ fun SettingsScreen(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
-                color = TextWhite
+                color = titleTextColor
             )
             Text(
                 text = "Configure playback, theme & app information",
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 12.sp,
-                color = TextMuted
+                color = subtitleTextColor
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
             // 1. Theme Setting Section
-            SettingsSectionHeader(title = "Appearance")
+            SettingsSectionHeader(title = "Appearance", isDark = isDark)
             Spacer(modifier = Modifier.height(8.dp))
-            SettingsCard {
+            SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -124,13 +132,13 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF281E57)),
+                                .background(iconBoxBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
                                 contentDescription = null,
-                                tint = GlowLilac,
+                                tint = if (isDark) GlowLilac else StreamViolet,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -141,14 +149,14 @@ fun SettingsScreen(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
-                                color = TextWhite
+                                color = titleTextColor
                             )
                             Text(
                                 text = if (isDarkMode) "#0E0A24 stream background" else "Clean lavender light surfaces",
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,
-                                color = TextMuted
+                                color = subtitleTextColor
                             )
                         }
                     }
@@ -159,8 +167,8 @@ fun SettingsScreen(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = StreamViolet,
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = Color(0xFF281E57)
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = if (isDark) Color(0xFF281E57) else Color(0xFFCCCCCC)
                         ),
                         modifier = Modifier.testTag("theme_switch")
                     )
@@ -170,15 +178,15 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // 2. Playback / Stream Settings
-            SettingsSectionHeader(title = "Streaming Playback")
+            SettingsSectionHeader(title = "Streaming Playback", isDark = isDark)
             Spacer(modifier = Modifier.height(8.dp))
-            SettingsCard {
+            SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Speed,
                             contentDescription = null,
-                            tint = GlowLilac,
+                            tint = if (isDark) GlowLilac else StreamViolet,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -188,13 +196,13 @@ fun SettingsScreen(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
-                                color = TextWhite
+                                color = titleTextColor
                             )
                             Text(
                                 text = "Balance between live speed and playback stability",
                                 fontFamily = InterFontFamily,
                                 fontSize = 12.sp,
-                                color = TextMuted
+                                color = subtitleTextColor
                             )
                         }
                     }
@@ -212,10 +220,10 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(shape)
-                                    .background(if (isSelected) StreamViolet else Color(0xFF130E30))
+                                    .background(if (isSelected) StreamViolet else innerOptionBg)
                                     .border(
                                         1.dp,
-                                        if (isSelected) StreamGradientStart else MidnightCardBorder,
+                                        if (isSelected) StreamGradientStart else cardBorder,
                                         shape
                                     )
                                     .clickable { onSetBufferMode(mode) }
@@ -237,7 +245,7 @@ fun SettingsScreen(
                                         fontFamily = InterFontFamily,
                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                         fontSize = 12.sp,
-                                        color = if (isSelected) Color.White else TextMuted
+                                        color = if (isSelected) Color.White else subtitleTextColor
                                     )
                                 }
                             }
@@ -249,9 +257,9 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // 3. Cache & Playlist Management
-            SettingsSectionHeader(title = "Data & Storage")
+            SettingsSectionHeader(title = "Data & Storage", isDark = isDark)
             Spacer(modifier = Modifier.height(8.dp))
-            SettingsCard {
+            SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -259,11 +267,14 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Cached,
                             contentDescription = null,
-                            tint = GlowLilac,
+                            tint = if (isDark) GlowLilac else StreamViolet,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -273,13 +284,13 @@ fun SettingsScreen(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp,
-                                color = TextWhite
+                                color = titleTextColor
                             )
                             Text(
-                                text = if (cacheClearedMessage) "Refreshing playlist registry..." else "Sync latest iptv-org playlists",
+                                text = if (cacheClearedMessage) "Refreshing playlist registry..." else "Sync 11k+ iptv-org playlists",
                                 fontFamily = InterFontFamily,
                                 fontSize = 12.sp,
-                                color = if (cacheClearedMessage) GlowLilac else TextMuted
+                                color = if (cacheClearedMessage) (if (isDark) GlowLilac else StreamViolet) else subtitleTextColor
                             )
                         }
                     }
@@ -291,7 +302,7 @@ fun SettingsScreen(
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF281E57)
+                            containerColor = StreamViolet
                         ),
                         modifier = Modifier.testTag("refresh_cache_button")
                     ) {
@@ -309,9 +320,9 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // 4. Developer & About
-            SettingsSectionHeader(title = "About MobiStream")
+            SettingsSectionHeader(title = "About MobiStream", isDark = isDark)
             Spacer(modifier = Modifier.height(8.dp))
-            SettingsCard {
+            SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
@@ -328,32 +339,32 @@ fun SettingsScreen(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = TextWhite
+                                color = titleTextColor
                             )
                             Text(
                                 text = "Streaming made mobile",
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 12.sp,
-                                color = GlowLilac
+                                color = if (isDark) GlowLilac else StreamViolet
                             )
                             Text(
-                                text = "Version 1.0.0 (Build 100)",
+                                text = "Version 1.0.1 (Build 101)",
                                 fontFamily = InterFontFamily,
                                 fontSize = 11.sp,
-                                color = TextMuted
+                                color = subtitleTextColor
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // GitHub Profile Link (required by user prompt)
+                    // GitHub Profile Link
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF130E30))
+                            .background(innerOptionBg)
                             .clickable {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/malhi3296/"))
                                 context.startActivity(intent)
@@ -366,7 +377,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.Code,
                                 contentDescription = null,
-                                tint = GlowLilac,
+                                tint = if (isDark) GlowLilac else StreamViolet,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -376,13 +387,13 @@ fun SettingsScreen(
                                     fontFamily = InterFontFamily,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp,
-                                    color = TextWhite
+                                    color = titleTextColor
                                 )
                                 Text(
                                     text = "https://github.com/malhi3296/",
                                     fontFamily = InterFontFamily,
                                     fontSize = 11.sp,
-                                    color = TextMuted
+                                    color = subtitleTextColor
                                 )
                             }
                         }
@@ -390,7 +401,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = "Open Link",
-                            tint = GlowLilac,
+                            tint = if (isDark) GlowLilac else StreamViolet,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -402,7 +413,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF130E30))
+                            .background(innerOptionBg)
                             .clickable {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/iptv-org/iptv"))
                                 context.startActivity(intent)
@@ -415,7 +426,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = GlowLilac,
+                                tint = if (isDark) GlowLilac else StreamViolet,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -425,13 +436,13 @@ fun SettingsScreen(
                                     fontFamily = InterFontFamily,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp,
-                                    color = TextWhite
+                                    color = titleTextColor
                                 )
                                 Text(
                                     text = "Powered by iptv-org open source community",
                                     fontFamily = InterFontFamily,
                                     fontSize = 11.sp,
-                                    color = TextMuted
+                                    color = subtitleTextColor
                                 )
                             }
                         }
@@ -439,7 +450,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = "Open Link",
-                            tint = GlowLilac,
+                            tint = if (isDark) GlowLilac else StreamViolet,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -452,25 +463,29 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
+private fun SettingsSectionHeader(title: String, isDark: Boolean) {
     Text(
         text = title,
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
-        color = GlowLilac
+        color = if (isDark) GlowLilac else StreamViolet
     )
 }
 
 @Composable
-private fun SettingsCard(content: @Composable () -> Unit) {
+private fun SettingsCard(
+    cardBg: Color,
+    cardBorder: Color,
+    content: @Composable () -> Unit
+) {
     val shape = RoundedCornerShape(16.dp)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, MidnightCardBorder, shape),
+            .border(1.dp, cardBorder, shape),
         shape = shape,
-        color = MidnightCard
+        color = cardBg
     ) {
         content()
     }

@@ -47,6 +47,9 @@ import com.example.ui.theme.MidnightCard
 import com.example.ui.theme.MidnightCardBorder
 import com.example.ui.theme.StreamGradientEnd
 import com.example.ui.theme.StreamGradientStart
+import com.example.ui.theme.StreamViolet
+import com.example.ui.theme.TextDarkPrimary
+import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
@@ -57,17 +60,26 @@ fun ChannelCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background != Color.White
     val cardShape = RoundedCornerShape(16.dp)
+
+    val cardBg = if (isDark) MidnightCard else Color(0xFFF5F6FC)
+    val cardBorder = if (isDark) MidnightCardBorder else Color(0xFFE2E4EE)
+    val previewBg = if (isDark) Color(0xFF130E30) else Color(0xFFE9EAF4)
+    val channelNameColor = if (isDark) TextWhite else TextDarkPrimary
+    val categoryBg = if (isDark) Color(0xFF281E57) else Color(0xFFEFE9FE)
+    val categoryTextColor = if (isDark) GlowLilac else StreamViolet
+    val metadataColor = if (isDark) TextMuted else TextDarkSecondary
 
     Surface(
         modifier = modifier
             .testTag("channel_card_${channel.id}")
             .clip(cardShape)
-            .border(1.dp, MidnightCardBorder, cardShape)
+            .border(1.dp, cardBorder, cardShape)
             .clickable { onClick() },
         shape = cardShape,
-        color = MidnightCard,
-        shadowElevation = 4.dp
+        color = cardBg,
+        shadowElevation = if (isDark) 4.dp else 2.dp
     ) {
         Column(
             modifier = Modifier
@@ -80,7 +92,7 @@ fun ChannelCard(
                     .fillMaxWidth()
                     .height(96.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF130E30)),
+                    .background(previewBg),
                 contentAlignment = Alignment.Center
             ) {
                 if (channel.logoUrl.isNotBlank()) {
@@ -132,13 +144,13 @@ fun ChannelCard(
                         .align(Alignment.TopEnd)
                         .size(34.dp)
                         .padding(2.dp)
-                        .background(Color(0x800E0A24), CircleShape)
+                        .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF), CircleShape)
                         .testTag("fav_button_${channel.id}")
                 ) {
                     Icon(
                         imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = if (channel.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (channel.isFavorite) LiveRed else Color.White,
+                        tint = if (channel.isFavorite) LiveRed else if (isDark) Color.White else TextDarkPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -150,7 +162,7 @@ fun ChannelCard(
                         .padding(6.dp)
                         .size(26.dp)
                         .clip(CircleShape)
-                        .background(Color(0x994F2BC4)),
+                        .background(StreamViolet),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -164,13 +176,13 @@ fun ChannelCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Channel Title
+            // Channel Title with High Contrast
             Text(
                 text = channel.name,
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                color = TextWhite,
+                color = channelNameColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -197,7 +209,7 @@ fun ChannelCard(
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextMuted,
+                        color = metadataColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -206,7 +218,7 @@ fun ChannelCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFF281E57))
+                        .background(categoryBg)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -214,7 +226,7 @@ fun ChannelCard(
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Medium,
                         fontSize = 10.sp,
-                        color = GlowLilac
+                        color = categoryTextColor
                     )
                 }
             }

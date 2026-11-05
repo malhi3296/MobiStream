@@ -46,9 +46,10 @@ import com.example.ui.components.ChannelCard
 import com.example.ui.theme.GlowLilac
 import com.example.ui.theme.InterFontFamily
 import com.example.ui.theme.LiveRed
-import com.example.ui.theme.MidnightBackground
 import com.example.ui.theme.MidnightCard
 import com.example.ui.theme.StreamViolet
+import com.example.ui.theme.TextDarkPrimary
+import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
@@ -61,6 +62,11 @@ fun FavoritesScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedCategoryFilter by remember { mutableStateOf("All") }
+    val isDark = MaterialTheme.colorScheme.background != Color.White
+
+    val primaryTextColor = if (isDark) TextWhite else TextDarkPrimary
+    val secondaryTextColor = if (isDark) TextMuted else TextDarkSecondary
+    val cardBg = if (isDark) MidnightCard else Color(0xFFF3F4F8)
 
     val categories = remember(favoriteChannels) {
         listOf("All") + favoriteChannels.map { it.category }.distinct()
@@ -84,7 +90,7 @@ fun FavoritesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             // Screen Header
             Row(
@@ -112,14 +118,14 @@ fun FavoritesScreen(
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 22.sp,
-                        color = TextWhite
+                        color = primaryTextColor
                     )
                     Text(
                         text = "${favoriteChannels.size} channels saved in offline database",
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
-                        color = TextMuted
+                        color = secondaryTextColor
                     )
                 }
             }
@@ -142,13 +148,13 @@ fun FavoritesScreen(
                             modifier = Modifier
                                 .size(88.dp)
                                 .clip(CircleShape)
-                                .background(MidnightCard),
+                                .background(cardBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Favorite,
                                 contentDescription = null,
-                                tint = GlowLilac,
+                                tint = if (isDark) GlowLilac else StreamViolet,
                                 modifier = Modifier.size(44.dp)
                             )
                         }
@@ -160,7 +166,7 @@ fun FavoritesScreen(
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
-                            color = TextWhite
+                            color = primaryTextColor
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -170,7 +176,7 @@ fun FavoritesScreen(
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.Normal,
                             fontSize = 13.sp,
-                            color = TextMuted,
+                            color = secondaryTextColor,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 24.dp)
                         )
@@ -194,7 +200,8 @@ fun FavoritesScreen(
                             Text(
                                 text = "Browse Channels",
                                 fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
                             )
                         }
                     }
@@ -213,7 +220,7 @@ fun FavoritesScreen(
                             val shape = RoundedCornerShape(12.dp)
                             Surface(
                                 shape = shape,
-                                color = if (isSelected) StreamViolet else MidnightCard,
+                                color = if (isSelected) StreamViolet else cardBg,
                                 modifier = Modifier
                                     .clip(shape)
                                     .clickable { selectedCategoryFilter = categoryName }
@@ -223,7 +230,7 @@ fun FavoritesScreen(
                                     fontFamily = InterFontFamily,
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     fontSize = 12.sp,
-                                    color = if (isSelected) Color.White else TextMuted,
+                                    color = if (isSelected) Color.White else secondaryTextColor,
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                                 )
                             }

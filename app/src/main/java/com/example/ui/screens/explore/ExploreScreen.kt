@@ -1,5 +1,6 @@
 package com.example.ui.screens.explore
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,18 +18,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,9 +49,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Category
@@ -49,61 +64,229 @@ import com.example.data.model.Country
 import com.example.data.model.Language
 import com.example.domain.FilterOptions
 import com.example.ui.components.ChannelCard
-import com.example.ui.components.FilterBottomSheet
-import com.example.ui.components.MobiStreamUnifiedTopBar
+import com.example.ui.components.CountryChannelCard
 import com.example.ui.components.SectionHeader
+import com.example.ui.components.getCountryFlag
 import com.example.ui.theme.GlowLilac
 import com.example.ui.theme.InterFontFamily
+import com.example.ui.theme.StreamGradientEnd
 import com.example.ui.theme.StreamGradientStart
 import com.example.ui.theme.StreamViolet
 import com.example.ui.theme.TextDarkPrimary
 import com.example.ui.theme.TextDarkSecondary
 
+enum class GroupType {
+    CATEGORY,
+    COUNTRY,
+    LANGUAGE
+}
+
+data class SelectedGroup(
+    val type: GroupType,
+    val title: String,
+    val identifier: String
+)
+
 @Composable
 fun ExploreScreen(
-    channels: List<Channel>,
+    allChannels: List<Channel>,
+    countryChannels: List<Channel>,
     categories: List<Category>,
     countries: List<Country>,
     languages: List<Language>,
+    detectedCountryName: String,
+    detectedCountryCode: String,
     filterOptions: FilterOptions,
     isDarkMode: Boolean,
-    onToggleTheme: () -> Unit,
-    onNavigateToSettings: () -> Unit,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    onSetCategory: (String) -> Unit,
-    onSetCountry: (String) -> Unit,
-    onSetLanguage: (String) -> Unit,
-    onResetFilters: () -> Unit,
-    onApplyFilters: (FilterOptions) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showFilterSheet by remember { mutableStateOf(false) }
     val isDark = MaterialTheme.colorScheme.background != Color.White
+    var selectedGroup by remember { mutableStateOf<SelectedGroup?>(null) }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .testTag("explore_screen")
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 1. Unified Top Bar identical to Home page
-            MobiStreamUnifiedTopBar(
-                isDarkMode = isDarkMode,
-                onToggleTheme = onToggleTheme,
-                onSettingsClick = onNavigateToSettings,
-                onFilterClick = { showFilterSheet = true },
-                hasActiveFilters = filterOptions.hasActiveFilters
-            )
+    // High-contrast text colors
+    val primaryTextColor = if (isDark) Color.White else TextDarkPrimary
+    val secondaryTextColor = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
 
+    // If a category, country, or language is clicked, open dedicated channel list page
+    if (selectedGroup != null) {
+        val group = selectedGroup!!
+        BackHandler { selectedGroup = null }
+
+        val matchingChannels = remember(group, allChannels, filterOptions) {
+            allChannels.filter { channel ->
+                val matchesGroup = when (group.type) {
+                    GroupType.CATEGORY -> channel.category.equals(group.identifier, ignoreCase = true)
+                    GroupType.COUNTRY -> channel.countryCode.equals(group.identifier, ignoreCase = true) ||
+                            channel.country.equals(group.title, ignoreCase = true)
+                    GroupType.LANGUAGE -> channel.language.equals(group.identifier, ignoreCase = true)
+                }
+                val matchesFilter = if (filterOptions.selectedQuality != "All") {
+                    channel.quality.contains(filterOptions.selectedQuality, ignoreCase = true)
+                } else true
+
+                matchesGroup && matchesFilter
+            }
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .testTag("group_channel_detail_screen")
+        ) {
+            // Group Header with Back button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { selectedGroup = null },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to Explore",
+                        tint = primaryTextColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = group.title,
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = primaryTextColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${matchingChannels.size} live channels available",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = secondaryTextColor
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isDark) Color(0xFF281E57) else Color(0xFFEFE9FE))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = when (group.type) {
+                            GroupType.CATEGORY -> "Category"
+                            GroupType.COUNTRY -> "Country"
+                            GroupType.LANGUAGE -> "Language"
+                        },
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        color = if (isDark) GlowLilac else StreamViolet
+                    )
+                }
+            }
+
+            // Grid of matching channels
+            if (matchingChannels.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "No channels found for ${group.title}",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = primaryTextColor
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Try another category or sync playlists from settings.",
+                            fontFamily = InterFontFamily,
+                            fontSize = 13.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(matchingChannels) { channel ->
+                        ChannelCard(
+                            channel = channel,
+                            onClick = { onSelectChannel(channel) },
+                            onToggleFavorite = { onToggleFavorite(channel.id) }
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        // Explore Root Page
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .testTag("explore_screen")
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 90.dp)
             ) {
-                // 2. Redesigned Search Bar
+                // 1. Top Channel List Slider: Left to right with user country
                 item {
+                    val countryFlag = getCountryFlag(detectedCountryCode)
+                    SectionHeader(
+                        title = "Popular in $countryFlag $detectedCountryName",
+                        onSeeAllClick = {
+                            selectedGroup = SelectedGroup(
+                                type = GroupType.COUNTRY,
+                                title = "$countryFlag $detectedCountryName",
+                                identifier = detectedCountryCode
+                            )
+                        }
+                    )
+
+                    if (countryChannels.isNotEmpty()) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            items(countryChannels) { channel ->
+                                CountryChannelCard(
+                                    channel = channel,
+                                    onPlayClick = { onSelectChannel(channel) },
+                                    onToggleFavorite = { onToggleFavorite(channel.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2. Search Bar
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -114,10 +297,10 @@ fun ExploreScreen(
                             onValueChange = onSearchQueryChange,
                             placeholder = {
                                 Text(
-                                    text = "Search channels, live streams, shows...",
+                                    text = "Search 11,000+ channels by name...",
                                     fontFamily = InterFontFamily,
                                     fontSize = 14.sp,
-                                    color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
+                                    color = secondaryTextColor
                                 )
                             },
                             leadingIcon = {
@@ -134,7 +317,7 @@ fun ExploreScreen(
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "Clear search",
-                                            tint = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
+                                            tint = secondaryTextColor,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -147,8 +330,8 @@ fun ExploreScreen(
                                 unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
                                 focusedBorderColor = StreamViolet,
                                 unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = if (isDark) Color.White else TextDarkPrimary,
-                                unfocusedTextColor = if (isDark) Color.White else TextDarkPrimary
+                                focusedTextColor = primaryTextColor,
+                                unfocusedTextColor = primaryTextColor
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -158,259 +341,553 @@ fun ExploreScreen(
                     }
                 }
 
-                // 3. Section 1: Categories (Horizontal scrollable from left to right)
-                item {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Categories",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (isDark) Color.White else TextDarkPrimary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                    )
-
-                    val categoryList = listOf("All") + categories.map { it.name }.distinct()
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    ) {
-                        items(categoryList) { categoryName ->
-                            val isSelected = filterOptions.selectedCategory.equals(categoryName, ignoreCase = true)
-                            ExploreHorizontalCard(
-                                title = categoryName,
-                                isSelected = isSelected,
-                                onClick = { onSetCategory(categoryName) }
-                            )
-                        }
+                // If user typed in search query, show search results
+                if (filterOptions.searchQuery.isNotBlank()) {
+                    val searchResults = allChannels.filter {
+                        it.name.contains(filterOptions.searchQuery, ignoreCase = true) ||
+                                it.category.contains(filterOptions.searchQuery, ignoreCase = true) ||
+                                it.country.contains(filterOptions.searchQuery, ignoreCase = true)
                     }
-                }
 
-                // 4. Section 2: Countries (Horizontal scrollable from left to right)
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Countries",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (isDark) Color.White else TextDarkPrimary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                    )
-
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    ) {
-                        item {
-                            ExploreHorizontalCard(
-                                title = "🌐 All",
-                                isSelected = filterOptions.selectedCountry == "All",
-                                onClick = { onSetCountry("All") }
-                            )
-                        }
-                        items(countries) { country ->
-                            val isSelected = filterOptions.selectedCountry.equals(country.code, ignoreCase = true) ||
-                                    filterOptions.selectedCountry.equals(country.name, ignoreCase = true)
-                            ExploreHorizontalCard(
-                                title = "${country.flag} ${country.name}",
-                                isSelected = isSelected,
-                                onClick = { onSetCountry(country.code) }
-                            )
-                        }
-                    }
-                }
-
-                // 5. Section 3: Languages (Horizontal scrollable from left to right)
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Languages",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (isDark) Color.White else TextDarkPrimary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                    )
-
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    ) {
-                        item {
-                            ExploreHorizontalCard(
-                                title = "🌐 All",
-                                isSelected = filterOptions.selectedLanguage == "All",
-                                onClick = { onSetLanguage("All") }
-                            )
-                        }
-                        items(languages) { language ->
-                            val isSelected = filterOptions.selectedLanguage.equals(language.name, ignoreCase = true)
-                            ExploreHorizontalCard(
-                                title = language.name,
-                                isSelected = isSelected,
-                                onClick = { onSetLanguage(language.name) }
-                            )
-                        }
-                    }
-                }
-
-                // 6. Header for Channels Grid
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "${channels.size} Channels Found",
+                            text = "${searchResults.size} channels found",
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = if (isDark) Color.White else TextDarkPrimary
+                            color = primaryTextColor,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                         )
-
-                        if (filterOptions.hasActiveFilters) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(StreamViolet)
-                                    .clickable { onResetFilters() }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                Text(
-                                    text = "Reset All",
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 11.sp,
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
 
-                // 7. Channels Grid (2-column)
-                if (channels.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(40.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "No channels match this filter",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = if (isDark) Color.White else TextDarkPrimary
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Try selecting different categories, countries or reset filters",
-                                fontFamily = InterFontFamily,
-                                fontSize = 12.sp,
-                                color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
-                            )
-                        }
-                    }
-                } else {
-                    items(channels.chunked(2)) { pair ->
+                    items(searchResults.chunked(2)) { pair ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 20.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                ChannelCard(
-                                    channel = pair[0],
-                                    onClick = { onSelectChannel(pair[0]) },
-                                    onToggleFavorite = { onToggleFavorite(pair[0].id) }
-                                )
-                            }
-                            if (pair.size > 1) {
+                            for (channel in pair) {
                                 Box(modifier = Modifier.weight(1f)) {
                                     ChannelCard(
-                                        channel = pair[1],
-                                        onClick = { onSelectChannel(pair[1]) },
-                                        onToggleFavorite = { onToggleFavorite(pair[1].id) }
+                                        channel = channel,
+                                        onClick = { onSelectChannel(channel) },
+                                        onToggleFavorite = { onToggleFavorite(channel.id) }
                                     )
                                 }
-                            } else {
+                            }
+                            if (pair.size == 1) {
                                 Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                } else {
+                    // NO direct channel list!
+                    // Put Big Divs for Categories, Countries, and Languages
+
+                    // SECTION 1: Categories (Big Divs)
+                    item {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Categories",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = primaryTextColor,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        )
+
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                        ) {
+                            items(categories) { category ->
+                                BigCategoryCard(
+                                    category = category,
+                                    isDark = isDark,
+                                    onClick = {
+                                        selectedGroup = SelectedGroup(
+                                            type = GroupType.CATEGORY,
+                                            title = category.name,
+                                            identifier = category.name
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // SECTION 2: Countries (Big Divs)
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Countries",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = primaryTextColor,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        )
+
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                        ) {
+                            items(countries) { country ->
+                                BigCountryCard(
+                                    country = country,
+                                    isDark = isDark,
+                                    onClick = {
+                                        selectedGroup = SelectedGroup(
+                                            type = GroupType.COUNTRY,
+                                            title = "${country.flag} ${country.name}",
+                                            identifier = country.code
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // SECTION 3: Languages (Big Divs)
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Languages",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = primaryTextColor,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        )
+
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                        ) {
+                            items(languages) { language ->
+                                BigLanguageCard(
+                                    language = language,
+                                    isDark = isDark,
+                                    onClick = {
+                                        selectedGroup = SelectedGroup(
+                                            type = GroupType.LANGUAGE,
+                                            title = "${language.name} Channels",
+                                            identifier = language.name
+                                        )
+                                    }
+                                )
                             }
                         }
                     }
                 }
             }
         }
-
-        // Filter Bottom Sheet when filter button is clicked
-        if (showFilterSheet) {
-            FilterBottomSheet(
-                filterOptions = filterOptions,
-                categories = categories,
-                countries = countries,
-                languages = languages,
-                onApplyFilters = onApplyFilters,
-                onDismiss = { showFilterSheet = false }
-            )
-        }
     }
 }
 
+/**
+ * Big Category Card (styled with 155dp size like popular channels on homepage)
+ */
 @Composable
-private fun ExploreHorizontalCard(
-    title: String,
-    isSelected: Boolean,
+fun BigCategoryCard(
+    category: Category,
+    isDark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
-    val cardShape = RoundedCornerShape(14.dp)
+    val cardShape = RoundedCornerShape(20.dp)
+    val cardGradient = getCategoryGradient(category.name, isDark)
 
-    Box(
+    Column(
         modifier = modifier
-            .clip(cardShape)
-            .background(
-                if (isSelected) {
-                    StreamViolet
-                } else {
-                    if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8)
-                }
-            )
-            .border(
-                width = 1.dp,
-                color = if (isSelected) StreamGradientStart else if (isDark) Color(0xFF2C2266) else Color(0xFFE4E4EE),
-                shape = cardShape
-            )
+            .width(155.dp)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        contentAlignment = Alignment.Center
+            .testTag("big_category_card_${category.name.lowercase()}"),
+        horizontalAlignment = Alignment.Start
     ) {
+        Box(
+            modifier = Modifier
+                .size(155.dp)
+                .clip(cardShape)
+                .background(cardGradient)
+                .border(
+                    width = 1.dp,
+                    color = if (isDark) Color(0xFF2C2266) else Color(0xFFE2E4EE),
+                    shape = cardShape
+                )
+        ) {
+            // Category Icon in center
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(if (isDark) Color(0x33FFFFFF) else Color(0x224F2BC4)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = getCategoryIcon(category.name),
+                    contentDescription = null,
+                    tint = if (isDark) Color.White else StreamViolet,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+
+            // Top Badge with "Category"
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF))
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = "CATEGORY",
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp,
+                    color = if (isDark) GlowLilac else StreamViolet
+                )
+            }
+
+            // Signature Circular arrow button docked at bottom-right
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFF19191B))
+                    .clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Open",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         Text(
-            text = title,
+            text = category.name,
             fontFamily = InterFontFamily,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-            fontSize = 13.sp,
-            color = if (isSelected) Color.White else if (isDark) Color.White else TextDarkPrimary
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = if (isDark) Color.White else TextDarkPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+
+        Text(
+            text = if (category.channelCount > 0) "${category.channelCount} channels" else "Live streams",
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 12.sp,
+            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Big Country Card (155dp size with country flag and channel count)
+ */
+@Composable
+fun BigCountryCard(
+    country: Country,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cardShape = RoundedCornerShape(20.dp)
+
+    Column(
+        modifier = modifier
+            .width(155.dp)
+            .clickable { onClick() }
+            .testTag("big_country_card_${country.code.lowercase()}"),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(155.dp)
+                .clip(cardShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            if (isDark) Color(0xFF241A5E) else Color(0xFFEFF0F9),
+                            if (isDark) Color(0xFF17113E) else Color(0xFFF7F8FD)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isDark) Color(0xFF2C2266) else Color(0xFFE2E4EE),
+                    shape = cardShape
+                )
+        ) {
+            // Big Flag in center
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(if (isDark) Color(0x22FFFFFF) else Color(0x33B7A6FF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = country.flag,
+                    fontSize = 32.sp
+                )
+            }
+
+            // Top Badge with ISO code
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF))
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = country.code,
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = if (isDark) GlowLilac else StreamViolet
+                )
+            }
+
+            // Bottom Right Action
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFF19191B))
+                    .clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Open",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = country.name,
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = if (isDark) Color.White else TextDarkPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = if (country.channelCount > 0) "${country.channelCount} channels" else "Explore country",
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 12.sp,
+            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Big Language Card (155dp size with language icon and channel count)
+ */
+@Composable
+fun BigLanguageCard(
+    language: Language,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cardShape = RoundedCornerShape(20.dp)
+
+    Column(
+        modifier = modifier
+            .width(155.dp)
+            .clickable { onClick() }
+            .testTag("big_language_card_${language.name.lowercase()}"),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(155.dp)
+                .clip(cardShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            if (isDark) Color(0xFF2A1C5A) else Color(0xFFF3F1FD),
+                            if (isDark) Color(0xFF1E1446) else Color(0xFFFAF9FF)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isDark) Color(0xFF2C2266) else Color(0xFFE2E4EE),
+                    shape = cardShape
+                )
+        ) {
+            // Language Icon
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(if (isDark) Color(0x33FFFFFF) else Color(0x224F2BC4)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = null,
+                    tint = if (isDark) GlowLilac else StreamViolet,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+
+            // Top Badge with Lang Code
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF))
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = language.code.uppercase(),
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = if (isDark) GlowLilac else StreamViolet
+                )
+            }
+
+            // Bottom Right Action
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFF19191B))
+                    .clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Open",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = language.name,
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = if (isDark) Color.White else TextDarkPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = if (language.channelCount > 0) "${language.channelCount} channels" else "Explore language",
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 12.sp,
+            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun getCategoryGradient(name: String, isDark: Boolean): Brush {
+    val lower = name.lowercase()
+    return when {
+        lower.contains("sport") -> Brush.linearGradient(
+            listOf(
+                if (isDark) Color(0xFF6B1D2F) else Color(0xFFFFECEF),
+                if (isDark) Color(0xFF38101E) else Color(0xFFFFF5F7)
+            )
+        )
+        lower.contains("movie") || lower.contains("film") || lower.contains("series") -> Brush.linearGradient(
+            listOf(
+                if (isDark) Color(0xFF3D1F72) else Color(0xFFF3ECFF),
+                if (isDark) Color(0xFF221147) else Color(0xFFF9F5FF)
+            )
+        )
+        lower.contains("news") -> Brush.linearGradient(
+            listOf(
+                if (isDark) Color(0xFF1D3F75) else Color(0xFFEAF2FF),
+                if (isDark) Color(0xFF112348) else Color(0xFFF4F8FF)
+            )
+        )
+        lower.contains("music") -> Brush.linearGradient(
+            listOf(
+                if (isDark) Color(0xFF75401D) else Color(0xFFFFF2EA),
+                if (isDark) Color(0xFF42210E) else Color(0xFFFFF8F4)
+            )
+        )
+        lower.contains("kid") || lower.contains("animat") -> Brush.linearGradient(
+            listOf(
+                if (isDark) Color(0xFF1D6A42) else Color(0xFFEBFDF3),
+                if (isDark) Color(0xFF103A24) else Color(0xFFF4FEF8)
+            )
+        )
+        else -> Brush.linearGradient(
+            listOf(
+                if (isDark) Color(0xFF2C2266) else Color(0xFFF3F1FC),
+                if (isDark) Color(0xFF1E174A) else Color(0xFFFAF9FE)
+            )
+        )
+    }
+}
+
+private fun getCategoryIcon(name: String): ImageVector {
+    val lower = name.lowercase()
+    return when {
+        lower.contains("sport") -> Icons.Default.SportsSoccer
+        lower.contains("movie") || lower.contains("series") || lower.contains("film") -> Icons.Default.Movie
+        lower.contains("music") -> Icons.Default.MusicNote
+        lower.contains("news") -> Icons.Default.Tv
+        else -> Icons.Default.Public
     }
 }

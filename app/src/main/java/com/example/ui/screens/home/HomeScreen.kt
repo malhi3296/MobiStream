@@ -105,17 +105,6 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Unified Top Bar: Logo on left, dark/light toggle, settings, and filter on right
-                item {
-                    MobiStreamUnifiedTopBar(
-                        isDarkMode = isDarkMode,
-                        onToggleTheme = onToggleTheme,
-                        onSettingsClick = onNavigateToSettings,
-                        onFilterClick = { showFilterSheet = true },
-                        hasActiveFilters = filterOptions.hasActiveFilters
-                    )
-                }
-
                 // Dynamic 5-slide Hero Carousel
                 if (slides.isNotEmpty()) {
                     item {
@@ -282,18 +271,6 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
-        }
-
-        // Filter Bottom Sheet
-        if (showFilterSheet) {
-            FilterBottomSheet(
-                filterOptions = filterOptions,
-                categories = categories,
-                countries = emptyList(),
-                languages = emptyList(),
-                onApplyFilters = onApplyFilters,
-                onDismiss = { showFilterSheet = false }
-            )
         }
     }
 }

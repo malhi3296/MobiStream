@@ -23,7 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.Channel
+import com.example.ui.components.FilterBottomSheet
 import com.example.ui.components.MobiStreamBottomNav
+import com.example.ui.components.MobiStreamUnifiedTopBar
 import com.example.ui.components.NavDestination
 import com.example.ui.components.UserInfoModal
 import com.example.ui.screens.explore.ExploreScreen
@@ -59,6 +61,7 @@ fun MainMobiStreamApp(
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var playingChannel by remember { mutableStateOf<Channel?>(null) }
     var showUserInfoModal by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     // Request runtime location permissions on install/first launch
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -96,19 +99,6 @@ fun MainMobiStreamApp(
                     )
                 }
 
-                ScreenState.SETTINGS_OVERLAY -> {
-                    BackHandler {
-                        screenState = ScreenState.MAIN
-                    }
-                    SettingsScreen(
-                        isDarkMode = uiState.isDarkMode,
-                        bufferMode = uiState.streamBufferMode,
-                        onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) },
-                        onSetBufferMode = { mode -> viewModel.setStreamBufferMode(mode) },
-                        onClearCache = { viewModel.loadData(forceRefresh = true) }
-                    )
-                }
-
                 ScreenState.PLAYER -> {
                     val current = playingChannel
                     if (current != null) {
@@ -134,20 +124,43 @@ fun MainMobiStreamApp(
                     }
                 }
 
-                ScreenState.MAIN -> {
-                    BackHandler(enabled = currentDestination != NavDestination.HOME) {
-                        currentDestination = NavDestination.HOME
+                ScreenState.MAIN, ScreenState.SETTINGS_OVERLAY -> {
+                    BackHandler(enabled = screenState == ScreenState.SETTINGS_OVERLAY || currentDestination != NavDestination.HOME) {
+                        if (screenState == ScreenState.SETTINGS_OVERLAY) {
+                            screenState = ScreenState.MAIN
+                        } else {
+                            currentDestination = NavDestination.HOME
+                        }
                     }
 
                     Scaffold(
+                        topBar = {
+                            // Persistent Top Bar across entire app (Home, Explore, Favourites, Settings, Category details)
+                            MobiStreamUnifiedTopBar(
+                                isDarkMode = uiState.isDarkMode,
+                                onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
+                                onSettingsClick = {
+                                    screenState = if (screenState == ScreenState.SETTINGS_OVERLAY) {
+                                        ScreenState.MAIN
+                                    } else {
+                                        ScreenState.SETTINGS_OVERLAY
+                                    }
+                                },
+                                onFilterClick = { showFilterSheet = true },
+                                hasActiveFilters = uiState.filterOptions.hasActiveFilters
+                            )
+                        },
                         bottomBar = {
-                            // Menubar with Home, Explore, Favourite, Profile
+                            // Bottom Menubar with Home, Explore, Favourite, Profile
                             MobiStreamBottomNav(
                                 currentDestination = currentDestination,
                                 onNavigate = { destination ->
                                     if (destination == NavDestination.PROFILE) {
                                         showUserInfoModal = true
                                     } else {
+                                        if (screenState == ScreenState.SETTINGS_OVERLAY) {
+                                            screenState = ScreenState.MAIN
+                                        }
                                         currentDestination = destination
                                     }
                                 }
@@ -155,100 +168,122 @@ fun MainMobiStreamApp(
                         },
                         containerColor = MaterialTheme.colorScheme.background
                     ) { innerPadding ->
-                        AnimatedContent(
-                            targetState = currentDestination,
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                            label = "navScreenTransition",
-                            modifier = Modifier.padding(innerPadding)
-                        ) { destination ->
-                            when (destination) {
-                                NavDestination.HOME -> {
-                                    HomeScreen(
-                                        slides = slideshowItems,
-                                        pinnedAndFavorites = pinnedAndFavorites,
-                                        countryChannels = countryChannels,
-                                        trendingChannels = allChannels,
-                                        categories = uiState.availableCategories,
-                                        detectedCountryName = uiState.detectedCountryName,
-                                        detectedCountryCode = uiState.detectedCountryCode,
-                                        filterOptions = uiState.filterOptions,
-                                        isDarkMode = uiState.isDarkMode,
-                                        isLoading = uiState.isLoading,
-                                        onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
-                                        onSelectChannel = { ch ->
-                                            playingChannel = ch
-                                            screenState = ScreenState.PLAYER
-                                        },
-                                        onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
-                                        onTogglePin = { id -> viewModel.togglePinned(id) },
-                                        onSelectCategory = { cat -> viewModel.setCategoryFilter(cat) },
-                                        onApplyFilters = { filters ->
-                                            viewModel.setCategoryFilter(filters.selectedCategory)
-                                            viewModel.setCountryFilter(filters.selectedCountry)
-                                            viewModel.setLanguageFilter(filters.selectedLanguage)
-                                            viewModel.setQualityFilter(filters.selectedQuality)
-                                        },
-                                        onNavigateToExplore = {
-                                            currentDestination = NavDestination.EXPLORE
-                                        },
-                                        onNavigateToSettings = {
-                                            screenState = ScreenState.SETTINGS_OVERLAY
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
+                            if (screenState == ScreenState.SETTINGS_OVERLAY) {
+                                SettingsScreen(
+                                    isDarkMode = uiState.isDarkMode,
+                                    bufferMode = uiState.streamBufferMode,
+                                    onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) },
+                                    onSetBufferMode = { mode -> viewModel.setStreamBufferMode(mode) },
+                                    onClearCache = { viewModel.loadData(forceRefresh = true) }
+                                )
+                            } else {
+                                AnimatedContent(
+                                    targetState = currentDestination,
+                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                    label = "navScreenTransition"
+                                ) { destination ->
+                                    when (destination) {
+                                        NavDestination.HOME -> {
+                                            HomeScreen(
+                                                slides = slideshowItems,
+                                                pinnedAndFavorites = pinnedAndFavorites,
+                                                countryChannels = countryChannels,
+                                                trendingChannels = allChannels,
+                                                categories = uiState.availableCategories,
+                                                detectedCountryName = uiState.detectedCountryName,
+                                                detectedCountryCode = uiState.detectedCountryCode,
+                                                filterOptions = uiState.filterOptions,
+                                                isDarkMode = uiState.isDarkMode,
+                                                isLoading = uiState.isLoading,
+                                                onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
+                                                onSelectChannel = { ch ->
+                                                    playingChannel = ch
+                                                    screenState = ScreenState.PLAYER
+                                                },
+                                                onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
+                                                onTogglePin = { id -> viewModel.togglePinned(id) },
+                                                onSelectCategory = { cat -> viewModel.setCategoryFilter(cat) },
+                                                onApplyFilters = { filters ->
+                                                    viewModel.setCategoryFilter(filters.selectedCategory)
+                                                    viewModel.setCountryFilter(filters.selectedCountry)
+                                                    viewModel.setLanguageFilter(filters.selectedLanguage)
+                                                    viewModel.setQualityFilter(filters.selectedQuality)
+                                                },
+                                                onNavigateToExplore = {
+                                                    currentDestination = NavDestination.EXPLORE
+                                                },
+                                                onNavigateToSettings = {
+                                                    screenState = ScreenState.SETTINGS_OVERLAY
+                                                }
+                                            )
                                         }
-                                    )
-                                }
 
-                                NavDestination.EXPLORE -> {
-                                    ExploreScreen(
-                                        channels = filteredChannels,
-                                        categories = uiState.availableCategories,
-                                        countries = uiState.availableCountries,
-                                        languages = uiState.availableLanguages,
-                                        filterOptions = uiState.filterOptions,
-                                        isDarkMode = uiState.isDarkMode,
-                                        onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
-                                        onNavigateToSettings = { screenState = ScreenState.SETTINGS_OVERLAY },
-                                        onSelectChannel = { ch ->
-                                            playingChannel = ch
-                                            screenState = ScreenState.PLAYER
-                                        },
-                                        onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
-                                        onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
-                                        onSetCategory = { cat -> viewModel.setCategoryFilter(cat) },
-                                        onSetCountry = { c -> viewModel.setCountryFilter(c) },
-                                        onSetLanguage = { l -> viewModel.setLanguageFilter(l) },
-                                        onResetFilters = { viewModel.resetFilters() },
-                                        onApplyFilters = { filters ->
-                                            viewModel.setCategoryFilter(filters.selectedCategory)
-                                            viewModel.setCountryFilter(filters.selectedCountry)
-                                            viewModel.setLanguageFilter(filters.selectedLanguage)
-                                            viewModel.setQualityFilter(filters.selectedQuality)
+                                        NavDestination.EXPLORE -> {
+                                            ExploreScreen(
+                                                allChannels = allChannels,
+                                                countryChannels = countryChannels,
+                                                categories = uiState.availableCategories,
+                                                countries = uiState.availableCountries,
+                                                languages = uiState.availableLanguages,
+                                                detectedCountryName = uiState.detectedCountryName,
+                                                detectedCountryCode = uiState.detectedCountryCode,
+                                                filterOptions = uiState.filterOptions,
+                                                isDarkMode = uiState.isDarkMode,
+                                                onSelectChannel = { ch ->
+                                                    playingChannel = ch
+                                                    screenState = ScreenState.PLAYER
+                                                },
+                                                onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
+                                                onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) }
+                                            )
                                         }
-                                    )
-                                }
 
-                                NavDestination.FAVOURITE -> {
-                                    FavoritesScreen(
-                                        favoriteChannels = favoriteChannels,
-                                        onSelectChannel = { ch ->
-                                            playingChannel = ch
-                                            screenState = ScreenState.PLAYER
-                                        },
-                                        onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
-                                        onExploreChannels = {
-                                            currentDestination = NavDestination.EXPLORE
+                                        NavDestination.FAVOURITE -> {
+                                            FavoritesScreen(
+                                                favoriteChannels = favoriteChannels,
+                                                onSelectChannel = { ch ->
+                                                    playingChannel = ch
+                                                    screenState = ScreenState.PLAYER
+                                                },
+                                                onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
+                                                onExploreChannels = {
+                                                    currentDestination = NavDestination.EXPLORE
+                                                }
+                                            )
                                         }
-                                    )
-                                }
 
-                                NavDestination.PROFILE -> {
-                                    // Profile opens UserInfoModal, fallback to HOME
-                                    currentDestination = NavDestination.HOME
-                                    showUserInfoModal = true
+                                        NavDestination.PROFILE -> {
+                                            currentDestination = NavDestination.HOME
+                                            showUserInfoModal = true
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            // Global Filter Bottom Sheet triggered by the top bar filter button
+            if (showFilterSheet) {
+                FilterBottomSheet(
+                    filterOptions = uiState.filterOptions,
+                    categories = uiState.availableCategories,
+                    countries = uiState.availableCountries,
+                    languages = uiState.availableLanguages,
+                    onApplyFilters = { filters ->
+                        viewModel.setCategoryFilter(filters.selectedCategory)
+                        viewModel.setCountryFilter(filters.selectedCountry)
+                        viewModel.setLanguageFilter(filters.selectedLanguage)
+                        viewModel.setQualityFilter(filters.selectedQuality)
+                    },
+                    onDismiss = { showFilterSheet = false }
+                )
             }
 
             // User Info Modal with UPI QR, GitHub, PayPal, and About app

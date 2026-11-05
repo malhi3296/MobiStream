@@ -16,7 +16,6 @@ data class Channel(
     val isFeatured: Boolean = false
 )
 
-
 data class Category(
     val id: String,
     val name: String,
@@ -27,10 +26,12 @@ data class Category(
 data class Country(
     val code: String,
     val name: String,
-    val flag: String = ""
+    val flag: String = "",
+    val channelCount: Int = 0
 )
 
 data class Language(
     val code: String,
-    val name: String
+    val name: String,
+    val channelCount: Int = 0
 )
