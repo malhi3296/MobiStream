@@ -12,7 +12,7 @@ val MidnightSurface = Color(0xFF161138)
 val MidnightCard = Color(0xFF1E174A)
 val MidnightCardBorder = Color(0xFF2C2266)
 val GlowLilac = Color(0xFFB7A6FF)
-val CloudSurface = Color(0xFFF5F3FF)
+val CloudSurface = Color(0xFFF8F9FE)
 val CloudBackground = Color(0xFFFFFFFF)
 val LiveRed = Color(0xFFE5334B)
 
@@ -26,8 +26,17 @@ val Tag4kPurple = Color(0xFF8B5CF6)
 // Text Colors
 val TextWhite = Color(0xFFFFFFFF)
 val TextMuted = Color(0xFFA19BD0)
-val TextDarkPrimary = Color(0xFF1A153A)
-val TextDarkSecondary = Color(0xFF6B658A)
+val TextDarkPrimary = Color(0xFF19191B)
+val TextDarkSecondary = Color(0xFF82828E)
+val CardLightBg = Color(0xFFF5F6FA)
+val BorderLight = Color(0xFFEEEEF4)
+
+// Genre Orb Gradients
+val GenreSportsGradient = Brush.radialGradient(listOf(Color(0xFFFF5252), Color(0xFFFF7A7A), Color(0x33FF5252)))
+val GenreNewsGradient = Brush.radialGradient(listOf(Color(0xFF3867D6), Color(0xFF4B7BEC), Color(0x333867D6)))
+val GenreMoviesGradient = Brush.radialGradient(listOf(Color(0xFF8854D0), Color(0xFFA55EEA), Color(0x338854D0)))
+val GenreMusicGradient = Brush.radialGradient(listOf(Color(0xFFFA8231), Color(0xFFFD9644), Color(0x33FA8231)))
+val GenreKidsGradient = Brush.radialGradient(listOf(Color(0xFF20BF6B), Color(0xFF26DE81), Color(0x3320BF6B)))
 
 // Gradient Brushes
 val StreamPrimaryGradient = Brush.linearGradient(
@@ -35,7 +44,4 @@ val StreamPrimaryGradient = Brush.linearGradient(
 )
 val StreamHeroGradient = Brush.verticalGradient(
     colors = listOf(Color.Transparent, Color(0xCC0E0A24), MidnightBackground)
-)
-val GlowOverlay = Brush.radialGradient(
-    colors = listOf(Color(0x339B6BFF), Color.Transparent)
 )

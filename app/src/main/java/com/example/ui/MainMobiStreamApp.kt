@@ -1,6 +1,9 @@
 package com.example.ui
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,8 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,16 +29,17 @@ import com.example.ui.screens.explore.ExploreScreen
 import com.example.ui.screens.favorites.FavoritesScreen
 import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.player.PlayerScreen
+import com.example.ui.screens.search.SearchScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.splash.SplashScreen
-import com.example.ui.theme.MidnightBackground
 import com.example.ui.theme.MobiStreamTheme
 import com.example.ui.viewmodel.MobiStreamViewModel
 
 enum class ScreenState {
     SPLASH,
     MAIN,
-    PLAYER
+    PLAYER,
+    SETTINGS_OVERLAY
 }
 
 @Composable
@@ -44,19 +50,40 @@ fun MainMobiStreamApp(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val allChannels by viewModel.allChannels.collectAsStateWithLifecycle()
     val filteredChannels by viewModel.filteredChannels.collectAsStateWithLifecycle()
-    val featuredChannels by viewModel.featuredChannels.collectAsStateWithLifecycle()
-    val popularChannels by viewModel.popularChannels.collectAsStateWithLifecycle()
+    val pinnedAndFavorites by viewModel.pinnedAndFavorites.collectAsStateWithLifecycle()
+    val countryChannels by viewModel.countryChannels.collectAsStateWithLifecycle()
     val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
+    val slideshowItems by viewModel.homeSlideshow.collectAsStateWithLifecycle()
 
     var screenState by remember { mutableStateOf(ScreenState.SPLASH) }
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var playingChannel by remember { mutableStateOf<Channel?>(null) }
 
+    // Requirement 7: Request runtime permissions on install / first launch
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        viewModel.onLocationPermissionResult(isGranted)
+    }
+
+    LaunchedEffect(Unit) {
+        if (!uiState.hasAskedLocationPermission) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
     MobiStreamTheme(darkTheme = uiState.isDarkMode) {
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(MidnightBackground)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             when (screenState) {
                 ScreenState.SPLASH -> {
@@ -65,6 +92,19 @@ fun MainMobiStreamApp(
                         onSplashFinished = {
                             screenState = ScreenState.MAIN
                         }
+                    )
+                }
+
+                ScreenState.SETTINGS_OVERLAY -> {
+                    BackHandler {
+                        screenState = ScreenState.MAIN
+                    }
+                    SettingsScreen(
+                        isDarkMode = uiState.isDarkMode,
+                        bufferMode = uiState.streamBufferMode,
+                        onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) },
+                        onSetBufferMode = { mode -> viewModel.setStreamBufferMode(mode) },
+                        onClearCache = { viewModel.loadData(forceRefresh = true) }
                     )
                 }
 
@@ -94,13 +134,14 @@ fun MainMobiStreamApp(
                 }
 
                 ScreenState.MAIN -> {
-                    // Back handler for main tabs
+                    // Back handler: Return to HOME if in sub-tab
                     BackHandler(enabled = currentDestination != NavDestination.HOME) {
                         currentDestination = NavDestination.HOME
                     }
 
                     Scaffold(
                         bottomBar = {
+                            // Requirement 4: 4 tabs: Home, Explore, Favourite, Search
                             MobiStreamBottomNav(
                                 currentDestination = currentDestination,
                                 onNavigate = { destination ->
@@ -108,7 +149,7 @@ fun MainMobiStreamApp(
                                 }
                             )
                         },
-                        containerColor = MidnightBackground
+                        containerColor = MaterialTheme.colorScheme.background
                     ) { innerPadding ->
                         AnimatedContent(
                             targetState = currentDestination,
@@ -119,10 +160,13 @@ fun MainMobiStreamApp(
                             when (destination) {
                                 NavDestination.HOME -> {
                                     HomeScreen(
-                                        channels = filteredChannels,
-                                        featuredChannels = featuredChannels,
-                                        popularChannels = popularChannels,
+                                        slides = slideshowItems,
+                                        pinnedAndFavorites = pinnedAndFavorites,
+                                        countryChannels = countryChannels,
+                                        trendingChannels = allChannels,
                                         categories = uiState.availableCategories,
+                                        detectedCountryName = uiState.detectedCountryName,
+                                        detectedCountryCode = uiState.detectedCountryCode,
                                         filterOptions = uiState.filterOptions,
                                         isLoading = uiState.isLoading,
                                         onSelectChannel = { ch ->
@@ -130,7 +174,7 @@ fun MainMobiStreamApp(
                                             screenState = ScreenState.PLAYER
                                         },
                                         onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
-                                        onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
+                                        onTogglePin = { id -> viewModel.togglePinned(id) },
                                         onSelectCategory = { cat -> viewModel.setCategoryFilter(cat) },
                                         onApplyFilters = { filters ->
                                             viewModel.setCategoryFilter(filters.selectedCategory)
@@ -140,6 +184,9 @@ fun MainMobiStreamApp(
                                         },
                                         onNavigateToExplore = {
                                             currentDestination = NavDestination.EXPLORE
+                                        },
+                                        onNavigateToSettings = {
+                                            screenState = ScreenState.SETTINGS_OVERLAY
                                         }
                                     )
                                 }
@@ -170,7 +217,7 @@ fun MainMobiStreamApp(
                                     )
                                 }
 
-                                NavDestination.FAVORITES -> {
+                                NavDestination.FAVOURITE -> {
                                     FavoritesScreen(
                                         favoriteChannels = favoriteChannels,
                                         onSelectChannel = { ch ->
@@ -184,13 +231,18 @@ fun MainMobiStreamApp(
                                     )
                                 }
 
-                                NavDestination.SETTINGS -> {
-                                    SettingsScreen(
-                                        isDarkMode = uiState.isDarkMode,
-                                        bufferMode = uiState.streamBufferMode,
-                                        onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) },
-                                        onSetBufferMode = { mode -> viewModel.setStreamBufferMode(mode) },
-                                        onClearCache = { viewModel.loadData(forceRefresh = true) }
+                                NavDestination.SEARCH -> {
+                                    SearchScreen(
+                                        channels = filteredChannels,
+                                        categories = uiState.availableCategories,
+                                        filterOptions = uiState.filterOptions,
+                                        onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
+                                        onSelectCategory = { cat -> viewModel.setCategoryFilter(cat) },
+                                        onSelectChannel = { ch ->
+                                            playingChannel = ch
+                                            screenState = ScreenState.PLAYER
+                                        },
+                                        onToggleFavorite = { id -> viewModel.toggleFavorite(id) }
                                     )
                                 }
                             }

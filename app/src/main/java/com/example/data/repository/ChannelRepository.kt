@@ -1,9 +1,14 @@
 package com.example.data.repository
 
+import android.content.Context
+import android.telephony.TelephonyManager
+import com.example.data.local.UserPreferencesManager
 import com.example.data.local.dao.ChannelDao
 import com.example.data.local.dao.FavoriteDao
+import com.example.data.local.dao.PinnedDao
 import com.example.data.local.entity.ChannelEntity
 import com.example.data.local.entity.FavoriteChannelEntity
+import com.example.data.local.entity.PinnedChannelEntity
 import com.example.data.model.Category
 import com.example.data.model.Channel
 import com.example.data.model.Country
@@ -17,41 +22,79 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class ChannelRepository(
     private val channelDao: ChannelDao,
     private val favoriteDao: FavoriteDao,
-    private val apiService: IptvApiService
+    private val pinnedDao: PinnedDao,
+    private val apiService: IptvApiService,
+    val preferences: UserPreferencesManager,
+    private val context: Context
 ) {
     val favoriteIds: Flow<List<String>> = favoriteDao.getFavoriteIds()
+    val pinnedIds: Flow<List<String>> = pinnedDao.getPinnedIds()
 
     val allChannels: Flow<List<Channel>> = combine(
         channelDao.getAllChannels(),
-        favoriteDao.getFavoriteIds()
-    ) { entities, favIds ->
+        favoriteDao.getFavoriteIds(),
+        pinnedDao.getPinnedIds()
+    ) { entities, favIds, pinIds ->
         val favSet = favIds.toSet()
-        entities.map { it.toDomain(isFavorite = favSet.contains(it.id)) }
+        val pinSet = pinIds.toSet()
+        entities.map {
+            it.toDomain(
+                isFavorite = favSet.contains(it.id),
+                isPinned = pinSet.contains(it.id)
+            )
+        }
     }.flowOn(Dispatchers.IO)
 
     val favoriteChannels: Flow<List<Channel>> = combine(
         channelDao.getAllChannels(),
-        favoriteDao.getFavoriteIds()
-    ) { entities, favIds ->
+        favoriteDao.getFavoriteIds(),
+        pinnedDao.getPinnedIds()
+    ) { entities, favIds, pinIds ->
         val favSet = favIds.toSet()
+        val pinSet = pinIds.toSet()
         entities.filter { favSet.contains(it.id) }
-            .map { it.toDomain(isFavorite = true) }
+            .map {
+                it.toDomain(
+                    isFavorite = true,
+                    isPinned = pinSet.contains(it.id)
+                )
+            }
+    }.flowOn(Dispatchers.IO)
+
+    // Pinned and Favourites combined, with Pinned channels strictly first!
+    val pinnedAndFavorites: Flow<List<Channel>> = combine(
+        channelDao.getAllChannels(),
+        favoriteDao.getFavoriteIds(),
+        pinnedDao.getPinnedIds()
+    ) { entities, favIds, pinIds ->
+        val favSet = favIds.toSet()
+        val pinSet = pinIds.toSet()
+        val channelMap = entities.associateBy { it.id }
+
+        val pinnedList = pinIds.mapNotNull { channelMap[it] }
+            .map { it.toDomain(isFavorite = favSet.contains(it.id), isPinned = true) }
+
+        val pinnedIdSet = pinnedList.map { it.id }.toSet()
+
+        val favList = favIds.filter { !pinnedIdSet.contains(it) }
+            .mapNotNull { channelMap[it] }
+            .map { it.toDomain(isFavorite = true, isPinned = false) }
+
+        pinnedList + favList
     }.flowOn(Dispatchers.IO)
 
     suspend fun initializeChannels(forceRefresh: Boolean = false) = withContext(Dispatchers.IO) {
         val count = channelDao.getCount()
         if (count == 0 || forceRefresh) {
-            // Seed first for immediate responsiveness
             if (count == 0) {
                 val seedEntities = SeedChannels.curatedChannels.map { ChannelEntity.fromDomain(it) }
                 channelDao.insertChannels(seedEntities)
             }
-
-            // Fetch live playlists from iptv-org
             fetchRemotePlaylists()
         }
     }
@@ -73,10 +116,9 @@ class ChannelRepository(
                 val response = apiService.fetchPlaylist(url)
                 val m3uString = response.string()
                 val parsed = M3uParser.parse(m3uString, defaultCategory = cat)
-                // Take top 40 from each category to prevent overwhelming memory while providing a rich catalog
                 fetchedChannels.addAll(parsed.take(40))
             } catch (e: Exception) {
-                // If specific category fetch fails, continue to next
+                // Ignore single playlist failure and continue
             }
         }
 
@@ -95,11 +137,47 @@ class ChannelRepository(
         }
     }
 
+    suspend fun togglePinned(channelId: String) = withContext(Dispatchers.IO) {
+        val isPin = pinnedDao.isPinned(channelId)
+        if (isPin) {
+            pinnedDao.deletePinned(channelId)
+        } else {
+            pinnedDao.insertPinned(PinnedChannelEntity(channelId = channelId))
+        }
+    }
+
+    fun detectDeviceCountry(): Pair<String, String> {
+        // Check saved country preference first
+        val savedCode = preferences.detectedCountryCode
+        val savedName = preferences.detectedCountryName
+        if (savedCode.isNotBlank() && savedName.isNotBlank()) {
+            return savedCode to savedName
+        }
+
+        // Try TelephonyManager (SIM/Network country)
+        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        val simCountry = tm?.simCountryIso?.uppercase(Locale.US)
+        val networkCountry = tm?.networkCountryIso?.uppercase(Locale.US)
+
+        val countryCode = when {
+            !simCountry.isNullOrBlank() && simCountry.length == 2 -> simCountry
+            !networkCountry.isNullOrBlank() && networkCountry.length == 2 -> networkCountry
+            else -> Locale.getDefault().country.uppercase(Locale.US)
+        }.takeIf { it.length == 2 } ?: "US"
+
+        val countryName = Locale("", countryCode).displayCountry.takeIf { it.isNotBlank() } ?: "United States"
+
+        preferences.detectedCountryCode = countryCode
+        preferences.detectedCountryName = countryName
+
+        return countryCode to countryName
+    }
+
     suspend fun getAvailableCategories(): List<Category> = withContext(Dispatchers.IO) {
         val channels = channelDao.getAllChannels().first()
         val grouped = channels.groupBy { it.category }
         val predefinedOrder = listOf("Sports", "News", "Movies", "Series", "Music", "Kids", "Documentary", "Entertainment")
-        
+
         val result = mutableListOf<Category>()
         for (cat in predefinedOrder) {
             val count = grouped[cat]?.size ?: 0

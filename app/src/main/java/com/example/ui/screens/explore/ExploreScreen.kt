@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Tab
@@ -92,9 +93,10 @@ fun ExploreScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MidnightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .testTag("explore_screen")
     ) {
+
         Column(modifier = Modifier.fillMaxSize()) {
             // Screen Header & Search
             Column(

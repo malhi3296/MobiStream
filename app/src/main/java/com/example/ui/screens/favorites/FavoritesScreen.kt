@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,9 +77,10 @@ fun FavoritesScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MidnightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .testTag("favorites_screen")
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

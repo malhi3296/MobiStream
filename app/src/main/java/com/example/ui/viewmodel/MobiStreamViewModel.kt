@@ -1,5 +1,7 @@
 package com.example.ui.viewmodel
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -18,6 +20,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class SlideShowItem(
+    val id: String,
+    val channel: Channel,
+    val programTitle: String,
+    val programSubtitle: String,
+    val tagText: String,
+    val tagColor: Color,
+    val bgGradient: Brush
+)
+
 data class MobiUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
@@ -26,15 +38,24 @@ data class MobiUiState(
     val availableCategories: List<Category> = emptyList(),
     val availableCountries: List<Country> = emptyList(),
     val availableLanguages: List<Language> = emptyList(),
-    val isDarkMode: Boolean = true,
-    val streamBufferMode: String = "Low Latency"
+    val isDarkMode: Boolean = false,
+    val streamBufferMode: String = "Low Latency",
+    val detectedCountryCode: String = "US",
+    val detectedCountryName: String = "United States",
+    val hasAskedLocationPermission: Boolean = false
 )
 
 class MobiStreamViewModel(
     private val repository: ChannelRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MobiUiState())
+    private val _uiState = MutableStateFlow(
+        MobiUiState(
+            isDarkMode = repository.preferences.isDarkMode,
+            streamBufferMode = repository.preferences.streamBufferMode,
+            hasAskedLocationPermission = repository.preferences.hasRequestedPermissions
+        )
+    )
     val uiState: StateFlow<MobiUiState> = _uiState.asStateFlow()
 
     val allChannels: StateFlow<List<Channel>> = repository.allChannels
@@ -51,10 +72,18 @@ class MobiStreamViewModel(
             initialValue = emptyList()
         )
 
-    val featuredChannels: StateFlow<List<Channel>> = repository.allChannels
+    // Pinned & Favorites (Pinned channels first)
+    val pinnedAndFavorites: StateFlow<List<Channel>> = repository.pinnedAndFavorites
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Slideshow with 5 slides: News with current news bg, Global live sports, and 3 random program sliders
+    val homeSlideshow: StateFlow<List<SlideShowItem>> = repository.allChannels
         .combine(_uiState) { channels, _ ->
-            val featured = channels.filter { it.isFeatured }
-            if (featured.isNotEmpty()) featured else channels.take(5)
+            generateSlideshow(channels)
         }
         .stateIn(
             scope = viewModelScope,
@@ -62,15 +91,22 @@ class MobiStreamViewModel(
             initialValue = emptyList()
         )
 
-    val popularChannels: StateFlow<List<Channel>> = repository.allChannels
-        .combine(_uiState) { channels, _ ->
-            channels.take(12)
+    // Channels filtered by user's detected country
+    val countryChannels: StateFlow<List<Channel>> = combine(
+        repository.allChannels,
+        _uiState
+    ) { channels, state ->
+        val userCode = state.detectedCountryCode
+        val matched = channels.filter {
+            it.countryCode.equals(userCode, ignoreCase = true) ||
+                    it.country.contains(state.detectedCountryName, ignoreCase = true)
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+        if (matched.isNotEmpty()) matched else channels.take(10)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
         repository.allChannels,
@@ -105,6 +141,13 @@ class MobiStreamViewModel(
     )
 
     init {
+        val (code, name) = repository.detectDeviceCountry()
+        _uiState.update {
+            it.copy(
+                detectedCountryCode = code,
+                detectedCountryName = name
+            )
+        }
         loadData()
     }
 
@@ -137,18 +180,37 @@ class MobiStreamViewModel(
         }
     }
 
-    fun selectChannel(channel: Channel) {
-        _uiState.update { it.copy(selectedChannel = channel) }
+    fun onLocationPermissionResult(granted: Boolean) {
+        repository.preferences.hasRequestedPermissions = true
+        _uiState.update { it.copy(hasAskedLocationPermission = true) }
+        val (code, name) = repository.detectDeviceCountry()
+        _uiState.update {
+            it.copy(
+                detectedCountryCode = code,
+                detectedCountryName = name
+            )
+        }
     }
 
     fun toggleFavorite(channelId: String) {
         viewModelScope.launch {
             repository.toggleFavorite(channelId)
-            // If current playing channel is toggled, update selected channel state
             val current = _uiState.value.selectedChannel
             if (current != null && current.id == channelId) {
                 _uiState.update {
                     it.copy(selectedChannel = current.copy(isFavorite = !current.isFavorite))
+                }
+            }
+        }
+    }
+
+    fun togglePinned(channelId: String) {
+        viewModelScope.launch {
+            repository.togglePinned(channelId)
+            val current = _uiState.value.selectedChannel
+            if (current != null && current.id == channelId) {
+                _uiState.update {
+                    it.copy(selectedChannel = current.copy(isPinned = !current.isPinned))
                 }
             }
         }
@@ -191,11 +253,105 @@ class MobiStreamViewModel(
     }
 
     fun toggleTheme(isDark: Boolean) {
+        repository.preferences.isDarkMode = isDark
         _uiState.update { it.copy(isDarkMode = isDark) }
     }
 
     fun setStreamBufferMode(mode: String) {
+        repository.preferences.streamBufferMode = mode
         _uiState.update { it.copy(streamBufferMode = mode) }
+    }
+
+    private fun generateSlideshow(channels: List<Channel>): List<SlideShowItem> {
+        if (channels.isEmpty()) return emptyList()
+
+        val slides = mutableListOf<SlideShowItem>()
+
+        // 1. News channel with current news program background
+        val newsChannel = channels.firstOrNull { it.category.equals("News", ignoreCase = true) } ?: channels[0]
+        slides.add(
+            SlideShowItem(
+                id = "slide_news",
+                channel = newsChannel,
+                programTitle = "Breaking World News Bulletin",
+                programSubtitle = "${newsChannel.name} • Live Global Reporting",
+                tagText = "BREAKING NEWS",
+                tagColor = Color(0xFFE5334B),
+                bgGradient = Brush.linearGradient(
+                    listOf(Color(0xFF990000), Color(0xFFCC1122), Color(0xFF1A1A2E))
+                )
+            )
+        )
+
+        // 2. Most important live sports event (global)
+        val sportsChannel = channels.firstOrNull { it.category.equals("Sports", ignoreCase = true) && it.id != newsChannel.id }
+            ?: channels.getOrNull(1) ?: channels[0]
+        slides.add(
+            SlideShowItem(
+                id = "slide_sports",
+                channel = sportsChannel,
+                programTitle = "World Football Championship",
+                programSubtitle = "${sportsChannel.name} • Live Stadium Broadcast",
+                tagText = "LIVE SPORTS",
+                tagColor = Color(0xFF2B7FFF),
+                bgGradient = Brush.linearGradient(
+                    listOf(Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364))
+                )
+            )
+        )
+
+        // 3. Random slider 3 (Movies / Entertainment)
+        val movieChannel = channels.firstOrNull { it.category.equals("Movies", ignoreCase = true) && it.id != newsChannel.id && it.id != sportsChannel.id }
+            ?: channels.getOrNull(2) ?: channels[0]
+        slides.add(
+            SlideShowItem(
+                id = "slide_movie",
+                channel = movieChannel,
+                programTitle = "Cinema Classics: Prime Feature",
+                programSubtitle = "${movieChannel.name} • FHD Broadcast",
+                tagText = "FEATURE FILM",
+                tagColor = Color(0xFF10B981),
+                bgGradient = Brush.linearGradient(
+                    listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0), Color(0xFF1F1C2C))
+                )
+            )
+        )
+
+        // 4. Random slider 4 (Music / Concerts)
+        val musicChannel = channels.firstOrNull { it.category.equals("Music", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
+            ?: channels.getOrNull(3) ?: channels[0]
+        slides.add(
+            SlideShowItem(
+                id = "slide_music",
+                channel = musicChannel,
+                programTitle = "World Live Tour Concerts",
+                programSubtitle = "${musicChannel.name} • Non-stop Hits",
+                tagText = "MUSIC LIVE",
+                tagColor = Color(0xFFF59E0B),
+                bgGradient = Brush.linearGradient(
+                    listOf(Color(0xFFFF416C), Color(0xFFFF4B2B), Color(0xFF2B1055))
+                )
+            )
+        )
+
+        // 5. Random slider 5 (Documentary / Nature)
+        val docChannel = channels.firstOrNull { it.category.equals("Documentary", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
+            ?: channels.getOrNull(4) ?: channels[0]
+        slides.add(
+            SlideShowItem(
+                id = "slide_doc",
+                channel = docChannel,
+                programTitle = "Planet Frontiers Exploration",
+                programSubtitle = "${docChannel.name} • 4K Wildlife & Science",
+                tagText = "DOCUMENTARY",
+                tagColor = Color(0xFF8B5CF6),
+                bgGradient = Brush.linearGradient(
+                    listOf(Color(0xFF134E5E), Color(0xFF71B280), Color(0xFF0F2027))
+                )
+            )
+        )
+
+        return slides
     }
 
     companion object {

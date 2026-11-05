@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -79,9 +80,10 @@ fun SettingsScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MidnightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .testTag("settings_screen")
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

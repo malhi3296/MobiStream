@@ -18,7 +18,7 @@ data class ChannelEntity(
     val quality: String,
     val isFeatured: Boolean
 ) {
-    fun toDomain(isFavorite: Boolean = false): Channel = Channel(
+    fun toDomain(isFavorite: Boolean = false, isPinned: Boolean = false): Channel = Channel(
         id = id,
         name = name,
         logoUrl = logoUrl,
@@ -30,8 +30,10 @@ data class ChannelEntity(
         quality = quality,
         isLive = true,
         isFavorite = isFavorite,
+        isPinned = isPinned,
         isFeatured = isFeatured
     )
+
 
     companion object {
         fun fromDomain(channel: Channel): ChannelEntity = ChannelEntity(

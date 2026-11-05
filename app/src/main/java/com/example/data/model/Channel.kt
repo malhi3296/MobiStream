@@ -12,8 +12,10 @@ data class Channel(
     val quality: String = "FHD",
     val isLive: Boolean = true,
     val isFavorite: Boolean = false,
+    val isPinned: Boolean = false,
     val isFeatured: Boolean = false
 )
+
 
 data class Category(
     val id: String,

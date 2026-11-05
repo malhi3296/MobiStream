@@ -18,11 +18,19 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         IptvApiService.create()
     }
 
+    private val preferences: com.example.data.local.UserPreferencesManager by lazy {
+        com.example.data.local.UserPreferencesManager(context)
+    }
+
     override val channelRepository: ChannelRepository by lazy {
         ChannelRepository(
             channelDao = database.channelDao(),
             favoriteDao = database.favoriteDao(),
-            apiService = apiService
+            pinnedDao = database.pinnedDao(),
+            apiService = apiService,
+            preferences = preferences,
+            context = context
         )
     }
 }
+
