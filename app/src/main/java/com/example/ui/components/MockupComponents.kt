@@ -135,23 +135,15 @@ fun MobiStreamHomeHeader(
                     .size(34.dp)
                     .clip(RoundedCornerShape(9.dp))
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Mobi",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = if (isDark) Color.White else TextDarkPrimary
-                )
-                Text(
-                    text = "Stream",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = if (isDark) GlowLilac else StreamViolet
-                )
-            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "MOBISTREAM",
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 17.sp,
+                letterSpacing = 1.8.sp,
+                color = if (isDark) Color.White else TextDarkPrimary
+            )
         }
 
         // Right side: LIVE pulse tag
@@ -212,8 +204,16 @@ fun DynamicHeroSlideshow(
                         .fillMaxSize()
                         .background(slide.bgGradient)
                 ) {
-                    // Logo or Visual Backdrop
-                    if (slide.channel.logoUrl.isNotBlank()) {
+                    // Show image backdrop or channel logo
+                    if (slide.showImageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = slide.showImageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                        )
+                    } else if (slide.channel.logoUrl.isNotBlank()) {
                         AsyncImage(
                             model = slide.channel.logoUrl,
                             contentDescription = slide.channel.name,
@@ -230,7 +230,7 @@ fun DynamicHeroSlideshow(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color(0x33000000), Color(0xAA000000))
+                                    listOf(Color(0x66000000), Color(0xDD0E0A24))
                                 )
                             )
                     )
@@ -254,32 +254,47 @@ fun DynamicHeroSlideshow(
                         )
                     }
 
-                    // Program title & subtitle on Bottom Left
-                    Column(
+                    // Requirement 3: Currently running program with image of that show at title
+                    Row(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(20.dp)
-                            .fillMaxWidth(0.75f)
+                            .padding(18.dp)
+                            .fillMaxWidth(0.78f),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = slide.programTitle,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = slide.programSubtitle,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp,
-                            color = Color(0xFFE2E2E2),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        if (slide.showImageUrl.isNotBlank()) {
+                            AsyncImage(
+                                model = slide.showImageUrl,
+                                contentDescription = slide.programTitle,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = slide.programTitle,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = slide.programSubtitle,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.5.sp,
+                                color = Color(0xFFE2E2E2),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

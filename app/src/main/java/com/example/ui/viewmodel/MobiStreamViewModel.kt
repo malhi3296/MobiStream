@@ -10,6 +10,7 @@ import com.example.data.model.Channel
 import com.example.data.model.Country
 import com.example.data.model.Language
 import com.example.data.repository.ChannelRepository
+import com.example.domain.EpgProvider
 import com.example.domain.FilterOptions
 import com.example.domain.GroupType
 import com.example.domain.SelectedGroup
@@ -31,7 +32,8 @@ data class SlideShowItem(
     val programSubtitle: String,
     val tagText: String,
     val tagColor: Color,
-    val bgGradient: Brush
+    val bgGradient: Brush,
+    val showImageUrl: String = ""
 )
 
 data class MobiUiState(
@@ -92,12 +94,13 @@ class MobiStreamViewModel(
             initialValue = emptyList()
         )
 
-    // Slideshow with 5 slides rotated every 30 minutes
+    // Slideshow with high-TRP channels in user's country across categories, News strictly first
     val homeSlideshow: StateFlow<List<SlideShowItem>> = combine(
         repository.allChannels,
+        _uiState,
         _slideshowTick
-    ) { channels, tick ->
-        generateSlideshow(channels, tick)
+    ) { channels, state, tick ->
+        generateSlideshow(channels, state.detectedCountryCode, tick)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -121,7 +124,7 @@ class MobiStreamViewModel(
         initialValue = emptyList()
     )
 
-    // Popular Global Channels (ESPN, BBC, CNN, Eurosport, Sky News, Red Bull, Bloomberg, France 24, MTV, Cartoon Network)
+    // Popular Global Channels
     val globalPopularChannels: StateFlow<List<Channel>> = repository.allChannels.combine(_uiState) { channels, _ ->
         val globalKeywords = listOf(
             "espn", "bbc", "cnn", "eurosport", "sky news", "red bull",
@@ -200,14 +203,12 @@ class MobiStreamViewModel(
     }
 
     private fun startPeriodicUpdaters() {
-        // Slideshow ticker: updates every 30 minutes
         viewModelScope.launch {
             while (isActive) {
                 delay(30 * 60 * 1000L)
                 _slideshowTick.update { it + 1 }
             }
         }
-        // Trending ticker: updates every 2 hours
         viewModelScope.launch {
             while (isActive) {
                 delay(2 * 60 * 60 * 1000L)
@@ -244,17 +245,20 @@ class MobiStreamViewModel(
         )
     }
 
-    /**
-     * Requirement 14: In explore, every category all popular global channels should be at top
-     * like ESPN for sports, CNN for news, HBO/Retro for movies, etc.
-     */
+    fun fetchLanguageChannels(language: String) {
+        viewModelScope.launch {
+            repository.fetchLanguagePlaylist(language)
+        }
+    }
+
     fun sortCategoryChannels(category: String, channels: List<Channel>): List<Channel> {
         val priorityKeywords = when (category.lowercase()) {
             "sports" -> listOf("espn", "bein", "sky sports", "eurosport", "fox sports", "red bull", "willow", "star sports", "sony")
-            "news" -> listOf("cnn", "bbc", "sky news", "al jazeera", "reuters", "bloomberg", "dw", "france 24", "ndtv", "india today", "dd news")
-            "movies", "series", "entertainment" -> listOf("hbo", "paramount", "starz", "cinemax", "filmrise", "retro", "rakuten", "cinema")
+            "news" -> listOf("cnn", "aaj tak", "india today", "ptc news", "bbc", "sky news", "al jazeera", "reuters", "bloomberg", "dw", "france 24", "ndtv")
+            "movies", "series", "entertainment" -> listOf("hbo", "paramount", "starz", "cinemax", "ptc punjabi", "filmrise", "retro", "rakuten", "cinema")
             "kids", "animation" -> listOf("cartoon network", "disney", "nickelodeon", "toon", "boomerang", "pbs kids")
-            "music" -> listOf("mtv", "vh1", "stingray", "clubbing", "trace", "kiss", "9xm", "b4u")
+            "music" -> listOf("9x tashan", "mtv", "vh1", "stingray", "clubbing", "trace", "kiss", "9xm")
+            "documentary" -> listOf("history", "discovery", "national geographic", "nature", "nasa")
             else -> listOf("global", "live", "hd", "news", "tv")
         }
 
@@ -384,108 +388,146 @@ class MobiStreamViewModel(
         _uiState.update { it.copy(streamBufferMode = mode) }
     }
 
-    private fun generateSlideshow(channels: List<Channel>, tick: Int = 0): List<SlideShowItem> {
+    /**
+     * Requirement 3:
+     * "On home page slider , show most viewed channels (TrP) in user country in each categories with currently running program with image of that show at title. Make news first slider item"
+     */
+    private fun generateSlideshow(channels: List<Channel>, countryCode: String, tick: Int = 0): List<SlideShowItem> {
         if (channels.isEmpty()) return emptyList()
 
+        val isIndia = countryCode.equals("IN", ignoreCase = true)
+        val countryChannels = channels.filter {
+            it.countryCode.equals(countryCode, ignoreCase = true) ||
+                    (isIndia && (it.countryCode == "IN" || it.country.contains("India", ignoreCase = true)))
+        }
+
+        val pool = if (countryChannels.isNotEmpty()) countryChannels else channels
         val slides = mutableListOf<SlideShowItem>()
 
-        // 1. News channel with current news program background
-        val newsChannels = channels.filter { it.category.equals("News", ignoreCase = true) }
-        val newsChannel = if (newsChannels.isNotEmpty()) {
-            newsChannels[(tick) % newsChannels.size]
-        } else channels[0]
+        // 1. NEWS CHANNEL (STRICTLY FIRST SLIDE)
+        val newsTrpKeywords = if (isIndia) {
+            listOf("aaj tak", "india today", "ptc news", "ndtv", "dd news", "abp")
+        } else {
+            listOf("cnn", "bbc news", "sky news", "bloomberg", "france 24")
+        }
+        val newsChannel = pool.firstOrNull { ch ->
+            ch.category.equals("News", ignoreCase = true) && newsTrpKeywords.any { ch.name.lowercase().contains(it) }
+        } ?: pool.firstOrNull { it.category.equals("News", ignoreCase = true) }
+        ?: channels.firstOrNull { it.category.equals("News", ignoreCase = true) } ?: pool[0]
 
+        val newsEpg = EpgProvider.getEpgForChannel(newsChannel)
         slides.add(
             SlideShowItem(
                 id = "slide_news_${newsChannel.id}",
                 channel = newsChannel,
-                programTitle = "Breaking World News Bulletin",
-                programSubtitle = "${newsChannel.name} • Live Global Reporting",
+                programTitle = newsEpg.currentTitle,
+                programSubtitle = "${newsChannel.name} • ${newsEpg.timeSlot}",
                 tagText = "BREAKING NEWS",
                 tagColor = Color(0xFFE5334B),
                 bgGradient = Brush.linearGradient(
-                    listOf(Color(0xFF990000), Color(0xFFCC1122), Color(0xFF1A1A2E))
-                )
+                    listOf(Color(0xFF8B0000), Color(0xFFB22222), Color(0xFF140728))
+                ),
+                showImageUrl = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop"
             )
         )
 
-        // 2. Most important live sports event (global)
-        val sportsChannels = channels.filter { it.category.equals("Sports", ignoreCase = true) && it.id != newsChannel.id }
-        val sportsChannel = if (sportsChannels.isNotEmpty()) {
-            sportsChannels[(tick) % sportsChannels.size]
-        } else channels.getOrNull(1) ?: channels[0]
+        // 2. SPORTS CHANNEL
+        val sportsTrpKeywords = if (isIndia) {
+            listOf("star sports", "sony sports", "willow", "red bull", "sports")
+        } else {
+            listOf("espn", "eurosport", "bein", "red bull")
+        }
+        val sportsChannel = pool.firstOrNull { ch ->
+            ch.category.equals("Sports", ignoreCase = true) && sportsTrpKeywords.any { ch.name.lowercase().contains(it) }
+        } ?: pool.firstOrNull { it.category.equals("Sports", ignoreCase = true) }
+        ?: channels.firstOrNull { it.category.equals("Sports", ignoreCase = true) } ?: pool.getOrNull(1) ?: pool[0]
 
+        val sportsEpg = EpgProvider.getEpgForChannel(sportsChannel)
         slides.add(
             SlideShowItem(
                 id = "slide_sports_${sportsChannel.id}",
                 channel = sportsChannel,
-                programTitle = "World Football Championship",
-                programSubtitle = "${sportsChannel.name} • Live Stadium Broadcast",
+                programTitle = sportsEpg.currentTitle,
+                programSubtitle = "${sportsChannel.name} • ${sportsEpg.timeSlot}",
                 tagText = "LIVE SPORTS",
                 tagColor = Color(0xFF2B7FFF),
                 bgGradient = Brush.linearGradient(
-                    listOf(Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364))
-                )
+                    listOf(Color(0xFF0D2235), Color(0xFF1D4E89), Color(0xFF0F1B29))
+                ),
+                showImageUrl = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop"
             )
         )
 
-        // 3. Random slider 3 (Movies / Entertainment)
-        val movieChannels = channels.filter { it.category.equals("Movies", ignoreCase = true) && it.id != newsChannel.id && it.id != sportsChannel.id }
-        val movieChannel = if (movieChannels.isNotEmpty()) {
-            movieChannels[(tick) % movieChannels.size]
-        } else channels.getOrNull(2) ?: channels[0]
+        // 3. ENTERTAINMENT / MOVIES
+        val movieTrpKeywords = if (isIndia) {
+            listOf("ptc punjabi", "zee", "sony", "star gold", "cinema")
+        } else {
+            listOf("hbo", "paramount", "retro", "filmrise", "cinedigm")
+        }
+        val movieChannel = pool.firstOrNull { ch ->
+            (ch.category.equals("Movies", ignoreCase = true) || ch.category.equals("Entertainment", ignoreCase = true)) &&
+                    movieTrpKeywords.any { ch.name.lowercase().contains(it) }
+        } ?: pool.firstOrNull { it.category.equals("Movies", ignoreCase = true) }
+        ?: channels.firstOrNull { it.category.equals("Movies", ignoreCase = true) } ?: pool.getOrNull(2) ?: pool[0]
 
+        val movieEpg = EpgProvider.getEpgForChannel(movieChannel)
         slides.add(
             SlideShowItem(
                 id = "slide_movie_${movieChannel.id}",
                 channel = movieChannel,
-                programTitle = "Cinema Classics: Prime Feature",
-                programSubtitle = "${movieChannel.name} • FHD Broadcast",
-                tagText = "FEATURE FILM",
+                programTitle = movieEpg.currentTitle,
+                programSubtitle = "${movieChannel.name} • ${movieEpg.timeSlot}",
+                tagText = "FEATURE SHOW",
                 tagColor = Color(0xFF10B981),
                 bgGradient = Brush.linearGradient(
-                    listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0), Color(0xFF1F1C2C))
-                )
+                    listOf(Color(0xFF4A0E4E), Color(0xFF6B1D73), Color(0xFF180A28))
+                ),
+                showImageUrl = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop"
             )
         )
 
-        // 4. Random slider 4 (Music / Concerts)
-        val musicChannels = channels.filter { it.category.equals("Music", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
-        val musicChannel = if (musicChannels.isNotEmpty()) {
-            musicChannels[(tick) % musicChannels.size]
-        } else channels.getOrNull(3) ?: channels[0]
+        // 4. DOCUMENTARY / INFOTAINMENT (History TV18 / Discovery)
+        val docTrpKeywords = listOf("history", "discovery", "national geographic", "nature", "nasa")
+        val docChannel = pool.firstOrNull { ch ->
+            ch.category.equals("Documentary", ignoreCase = true) && docTrpKeywords.any { ch.name.lowercase().contains(it) }
+        } ?: channels.firstOrNull { it.name.contains("History", ignoreCase = true) }
+        ?: channels.firstOrNull { it.category.equals("Documentary", ignoreCase = true) } ?: pool.getOrNull(3) ?: pool[0]
 
-        slides.add(
-            SlideShowItem(
-                id = "slide_music_${musicChannel.id}",
-                channel = musicChannel,
-                programTitle = "World Live Tour Concerts",
-                programSubtitle = "${musicChannel.name} • Non-stop Hits",
-                tagText = "MUSIC LIVE",
-                tagColor = Color(0xFFF59E0B),
-                bgGradient = Brush.linearGradient(
-                    listOf(Color(0xFFFF416C), Color(0xFFFF4B2B), Color(0xFF2B1055))
-                )
-            )
-        )
-
-        // 5. Random slider 5 (Documentary / Nature)
-        val docChannels = channels.filter { it.category.equals("Documentary", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
-        val docChannel = if (docChannels.isNotEmpty()) {
-            docChannels[(tick) % docChannels.size]
-        } else channels.getOrNull(4) ?: channels[0]
-
+        val docEpg = EpgProvider.getEpgForChannel(docChannel)
         slides.add(
             SlideShowItem(
                 id = "slide_doc_${docChannel.id}",
                 channel = docChannel,
-                programTitle = "Planet Frontiers Exploration",
-                programSubtitle = "${docChannel.name} • 4K Wildlife & Science",
-                tagText = "DOCUMENTARY",
+                programTitle = docEpg.currentTitle,
+                programSubtitle = "${docChannel.name} • ${docEpg.timeSlot}",
+                tagText = "DOCU SPECIAL",
                 tagColor = Color(0xFF8B5CF6),
                 bgGradient = Brush.linearGradient(
-                    listOf(Color(0xFF134E5E), Color(0xFF71B280), Color(0xFF0F2027))
-                )
+                    listOf(Color(0xFF1B3B36), Color(0xFF2C5D54), Color(0xFF0F1E1B))
+                ),
+                showImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop"
+            )
+        )
+
+        // 5. MUSIC (9X Tashan / MTV Live)
+        val musicTrpKeywords = listOf("9x tashan", "mtv", "stingray", "clubbing")
+        val musicChannel = pool.firstOrNull { ch ->
+            ch.category.equals("Music", ignoreCase = true) && musicTrpKeywords.any { ch.name.lowercase().contains(it) }
+        } ?: channels.firstOrNull { it.category.equals("Music", ignoreCase = true) } ?: pool.getOrNull(4) ?: pool[0]
+
+        val musicEpg = EpgProvider.getEpgForChannel(musicChannel)
+        slides.add(
+            SlideShowItem(
+                id = "slide_music_${musicChannel.id}",
+                channel = musicChannel,
+                programTitle = musicEpg.currentTitle,
+                programSubtitle = "${musicChannel.name} • ${musicEpg.timeSlot}",
+                tagText = "HOT HITS",
+                tagColor = Color(0xFFF59E0B),
+                bgGradient = Brush.linearGradient(
+                    listOf(Color(0xFF5C1D24), Color(0xFF8B263E), Color(0xFF1E0A12))
+                ),
+                showImageUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop"
             )
         )
 

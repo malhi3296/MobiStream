@@ -393,6 +393,58 @@ object SeedChannels {
             quality = "1080p",
             isLive = true,
             isFeatured = true
+        ),
+        Channel(
+            id = "history_tv18_in",
+            name = "History TV18",
+            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/HistoryTV18.in.png",
+            streamUrl = "https://live.historyindia.com/hls/live/master.m3u8",
+            category = "Documentary",
+            country = "India",
+            countryCode = "IN",
+            language = "Hindi",
+            quality = "1080p",
+            isLive = true,
+            isFeatured = true
+        ),
+        Channel(
+            id = "aaj_tak_news",
+            name = "Aaj Tak",
+            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/AajTak.in.png",
+            streamUrl = "https://aajtaklive-amd.akamaized.net/hls/live/2014416/aajtak/aajtaklive/master.m3u8",
+            category = "News",
+            country = "India",
+            countryCode = "IN",
+            language = "Hindi",
+            quality = "1080p",
+            isLive = true,
+            isFeatured = true
+        ),
+        Channel(
+            id = "9x_tashan_music",
+            name = "9X Tashan",
+            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/9XTashan.in.png",
+            streamUrl = "https://amg01281-9xmediapvtltd-9xtashan-samsungin-xz1sd.amagi.tv/playlist/amg01281-9xmediapvtltd-9xtashan-samsungin/playlist.m3u8",
+            category = "Music",
+            country = "India",
+            countryCode = "IN",
+            language = "Punjabi",
+            quality = "1080p",
+            isLive = true,
+            isFeatured = true
+        ),
+        Channel(
+            id = "abp_sanjha_punjabi",
+            name = "ABP Sanjha",
+            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/ABPSanjha.in.png",
+            streamUrl = "https://abpsanjha-live.akamaized.net/hls/live/2014420/abpsanjha/master.m3u8",
+            category = "News",
+            country = "India",
+            countryCode = "IN",
+            language = "Punjabi",
+            quality = "1080p",
+            isLive = true,
+            isFeatured = true
         )
     )
 }

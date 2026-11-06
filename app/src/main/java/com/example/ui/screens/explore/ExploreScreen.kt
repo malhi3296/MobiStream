@@ -96,6 +96,7 @@ fun ExploreScreen(
     selectedGroup: SelectedGroup?,
     onSelectGroup: (SelectedGroup?) -> Unit,
     sortCategoryChannels: (String, List<Channel>) -> List<Channel>,
+    onFetchLanguageChannels: (String) -> Unit = {},
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
@@ -104,6 +105,38 @@ fun ExploreScreen(
     val isDark = MaterialTheme.colorScheme.background != Color.White
     var subView by remember { mutableStateOf(ExploreSubView.NONE) }
     var subViewSearch by remember { mutableStateOf("") }
+
+    // Dynamic, exact counts calculated from the current allChannels dataset
+    // Ensuring outside card count and inside detail count are 100% in sync
+    val categoryCounts = remember(allChannels) {
+        val map = mutableMapOf<String, Int>()
+        allChannels.forEach { ch ->
+            val cat = ch.category.trim()
+            if (cat.isNotEmpty()) {
+                map[cat.lowercase(java.util.Locale.ROOT)] = (map[cat.lowercase(java.util.Locale.ROOT)] ?: 0) + 1
+            }
+        }
+        map
+    }
+
+    val countryCounts = remember(allChannels) {
+        val map = mutableMapOf<String, Int>()
+        allChannels.forEach { ch ->
+            val code = ch.countryCode.trim().lowercase(java.util.Locale.ROOT)
+            val name = ch.country.trim().lowercase(java.util.Locale.ROOT)
+            if (code.isNotEmpty()) map[code] = (map[code] ?: 0) + 1
+            if (name.isNotEmpty()) map[name] = (map[name] ?: 0) + 1
+        }
+        map
+    }
+
+    val languageCounts = remember(allChannels, languages) {
+        languages.associate { lang ->
+            lang.name to allChannels.count {
+                isChannelMatchingGroup(it, GroupType.LANGUAGE, lang.code, lang.name)
+            }
+        }
+    }
 
     // High-contrast text colors
     val primaryTextColor = if (isDark) Color.White else TextDarkPrimary
@@ -114,14 +147,15 @@ fun ExploreScreen(
         val group = selectedGroup
         BackHandler { onSelectGroup(null) }
 
+        androidx.compose.runtime.LaunchedEffect(group) {
+            if (group.type == GroupType.LANGUAGE) {
+                onFetchLanguageChannels(group.identifier)
+            }
+        }
+
         val matchingChannels = remember(group, allChannels, filterOptions) {
             val raw = allChannels.filter { channel ->
-                val matchesGroup = when (group.type) {
-                    GroupType.CATEGORY -> channel.category.equals(group.identifier, ignoreCase = true)
-                    GroupType.COUNTRY -> channel.countryCode.equals(group.identifier, ignoreCase = true) ||
-                            channel.country.equals(group.title, ignoreCase = true)
-                    GroupType.LANGUAGE -> channel.language.equals(group.identifier, ignoreCase = true)
-                }
+                val matchesGroup = isChannelMatchingGroup(channel, group.type, group.identifier, group.title)
                 val matchesFilter = if (filterOptions.selectedQuality != "All") {
                     channel.quality.contains(filterOptions.selectedQuality, ignoreCase = true)
                 } else true
@@ -129,7 +163,7 @@ fun ExploreScreen(
                 matchesGroup && matchesFilter
             }
 
-            // Requirement 14: Prioritize popular global channels at the top (ESPN, CNN, etc.)
+            // Prioritize popular global channels at the top for categories
             if (group.type == GroupType.CATEGORY) {
                 sortCategoryChannels(group.identifier, raw)
             } else {
@@ -335,6 +369,7 @@ fun ExploreScreen(
                     BigCountryCard(
                         country = country,
                         isDark = isDark,
+                        dynamicCount = countryCounts[country.code.lowercase(java.util.Locale.ROOT)] ?: countryCounts[country.name.lowercase(java.util.Locale.ROOT)],
                         onClick = {
                             subView = ExploreSubView.NONE
                             onSelectGroup(
@@ -439,6 +474,7 @@ fun ExploreScreen(
                     BigLanguageCard(
                         language = language,
                         isDark = isDark,
+                        dynamicCount = languageCounts[language.name],
                         onClick = {
                             subView = ExploreSubView.NONE
                             onSelectGroup(
@@ -624,6 +660,7 @@ fun ExploreScreen(
                                 BigCategoryCard(
                                     category = category,
                                     isDark = isDark,
+                                    dynamicCount = categoryCounts[category.name.lowercase(java.util.Locale.ROOT)],
                                     onClick = {
                                         onSelectGroup(
                                             SelectedGroup(
@@ -677,6 +714,7 @@ fun ExploreScreen(
                                 BigCountryCard(
                                     country = country,
                                     isDark = isDark,
+                                    dynamicCount = countryCounts[country.code.lowercase(java.util.Locale.ROOT)] ?: countryCounts[country.name.lowercase(java.util.Locale.ROOT)],
                                     onClick = {
                                         onSelectGroup(
                                             SelectedGroup(
@@ -741,6 +779,7 @@ fun ExploreScreen(
                                 BigLanguageCard(
                                     language = language,
                                     isDark = isDark,
+                                    dynamicCount = languageCounts[language.name],
                                     onClick = {
                                         onSelectGroup(
                                             SelectedGroup(
@@ -891,7 +930,8 @@ fun BigCategoryCard(
     category: Category,
     isDark: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dynamicCount: Int? = null
 ) {
     val cardShape = RoundedCornerShape(20.dp)
     val cardGradient = getCategoryGradient(category.name, isDark)
@@ -982,8 +1022,9 @@ fun BigCategoryCard(
             overflow = TextOverflow.Ellipsis
         )
 
+        val count = dynamicCount ?: category.channelCount
         Text(
-            text = if (category.channelCount > 0) "${category.channelCount} channels" else "Live streams",
+            text = if (count == 1) "1 channel" else if (count > 0) "$count channels" else "Live streams",
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 12.sp,
@@ -1002,7 +1043,8 @@ fun BigCountryCard(
     country: Country,
     isDark: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dynamicCount: Int? = null
 ) {
     val cardShape = RoundedCornerShape(20.dp)
 
@@ -1097,8 +1139,9 @@ fun BigCountryCard(
             overflow = TextOverflow.Ellipsis
         )
 
+        val count = dynamicCount ?: country.channelCount
         Text(
-            text = if (country.channelCount > 0) "${country.channelCount} channels" else "Explore country",
+            text = if (count == 1) "1 channel" else if (count > 0) "$count channels" else "Explore country",
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 12.sp,
@@ -1117,7 +1160,8 @@ fun BigLanguageCard(
     language: Language,
     isDark: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dynamicCount: Int? = null
 ) {
     val cardShape = RoundedCornerShape(20.dp)
 
@@ -1214,8 +1258,9 @@ fun BigLanguageCard(
             overflow = TextOverflow.Ellipsis
         )
 
+        val count = dynamicCount ?: language.channelCount
         Text(
-            text = if (language.channelCount > 0) "${language.channelCount} channels" else "Explore language",
+            text = if (count == 1) "1 channel" else if (count > 0) "$count channels" else "Explore language",
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 12.sp,
@@ -1276,5 +1321,58 @@ private fun getCategoryIcon(name: String): ImageVector {
         lower.contains("music") -> Icons.Default.MusicNote
         lower.contains("news") -> Icons.Default.Tv
         else -> Icons.Default.Public
+    }
+}
+
+fun isChannelMatchingGroup(channel: Channel, groupType: GroupType, identifier: String, title: String = ""): Boolean {
+    return when (groupType) {
+        GroupType.CATEGORY -> channel.category.equals(identifier, ignoreCase = true)
+        GroupType.COUNTRY -> {
+            channel.countryCode.equals(identifier, ignoreCase = true) ||
+                    (title.isNotBlank() && channel.country.contains(title.replace(Regex("[^a-zA-Z ]"), "").trim(), ignoreCase = true)) ||
+                    channel.country.equals(identifier, ignoreCase = true)
+        }
+        GroupType.LANGUAGE -> {
+            val target = identifier.trim().lowercase(java.util.Locale.ROOT)
+            val titleClean = title.replace("Channels", "").replace(Regex("[^a-zA-Z ]"), "").trim().lowercase(java.util.Locale.ROOT)
+            val chLang = channel.language.trim().lowercase(java.util.Locale.ROOT)
+            val chId = channel.id.lowercase(java.util.Locale.ROOT)
+
+            if (chLang.isNotEmpty() && (chLang == target || (titleClean.isNotEmpty() && chLang == titleClean))) return true
+
+            ((target in listOf("punjabi", "panjabi", "pan") || titleClean in listOf("punjabi", "panjabi", "pan")) &&
+                    (chLang in listOf("punjabi", "panjabi", "pan") || chId.contains("punjabi") || chId.contains(".pan@"))) ||
+            ((target in listOf("hindi", "hin") || titleClean in listOf("hindi", "hin")) &&
+                    (chLang in listOf("hindi", "hin") || chId.contains(".hin@"))) ||
+            ((target in listOf("english", "eng") || titleClean in listOf("english", "eng")) &&
+                    (chLang in listOf("english", "eng") || chId.contains(".eng@"))) ||
+            ((target in listOf("urdu", "urd") || titleClean in listOf("urdu", "urd")) &&
+                    (chLang in listOf("urdu", "urd") || chId.contains(".urd@"))) ||
+            ((target in listOf("tamil", "tam") || titleClean in listOf("tamil", "tam")) &&
+                    (chLang in listOf("tamil", "tam") || chId.contains(".tam@"))) ||
+            ((target in listOf("telugu", "tel") || titleClean in listOf("telugu", "tel")) &&
+                    (chLang in listOf("telugu", "tel") || chId.contains(".tel@"))) ||
+            ((target in listOf("bengali", "bangla", "ben") || titleClean in listOf("bengali", "bangla", "ben")) &&
+                    (chLang in listOf("bengali", "bangla", "ben") || chId.contains(".ben@"))) ||
+            ((target in listOf("malayalam", "mal") || titleClean in listOf("malayalam", "mal")) &&
+                    (chLang in listOf("malayalam", "mal") || chId.contains(".mal@"))) ||
+            ((target in listOf("kannada", "kan") || titleClean in listOf("kannada", "kan")) &&
+                    (chLang in listOf("kannada", "kan") || chId.contains(".kan@"))) ||
+            ((target in listOf("marathi", "mar") || titleClean in listOf("marathi", "mar")) &&
+                    (chLang in listOf("marathi", "mar") || chId.contains(".mar@"))) ||
+            ((target in listOf("gujarati", "guj") || titleClean in listOf("gujarati", "guj")) &&
+                    (chLang in listOf("gujarati", "guj") || chId.contains(".guj@"))) ||
+            ((target in listOf("spanish", "spa") || titleClean in listOf("spanish", "spa")) &&
+                    (chLang in listOf("spanish", "spa") || chId.contains(".spa@"))) ||
+            ((target in listOf("french", "fra") || titleClean in listOf("french", "fra")) &&
+                    (chLang in listOf("french", "fra") || chId.contains(".fra@"))) ||
+            ((target in listOf("arabic", "ara") || titleClean in listOf("arabic", "ara")) &&
+                    (chLang in listOf("arabic", "ara") || chId.contains(".ara@"))) ||
+            ((target in listOf("russian", "rus") || titleClean in listOf("russian", "rus")) &&
+                    (chLang in listOf("russian", "rus") || chId.contains(".rus@"))) ||
+            ((target in listOf("german", "deu") || titleClean in listOf("german", "deu")) &&
+                    (chLang in listOf("german", "deu") || chId.contains(".deu@"))) ||
+            (chLang.isNotEmpty() && target.isNotEmpty() && (chLang.contains(target) || target.contains(chLang)))
+        }
     }
 }

@@ -38,7 +38,6 @@ import com.example.ui.theme.MobiStreamTheme
 import com.example.ui.viewmodel.MobiStreamViewModel
 
 enum class ScreenState {
-    SPLASH,
     MAIN,
     PLAYER,
     SETTINGS_OVERLAY
@@ -60,7 +59,7 @@ fun MainMobiStreamApp(
     val slideshowItems by viewModel.homeSlideshow.collectAsStateWithLifecycle()
     val selectedExploreGroup by viewModel.selectedExploreGroup.collectAsStateWithLifecycle()
 
-    var screenState by remember { mutableStateOf(ScreenState.SPLASH) }
+    var screenState by remember { mutableStateOf(ScreenState.MAIN) }
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var playingChannel by remember { mutableStateOf<Channel?>(null) }
     var showUserInfoModal by remember { mutableStateOf(false) }
@@ -93,14 +92,6 @@ fun MainMobiStreamApp(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             when (screenState) {
-                ScreenState.SPLASH -> {
-                    SplashScreen(
-                        isLoading = uiState.isLoading,
-                        onSplashFinished = {
-                            screenState = ScreenState.MAIN
-                        }
-                    )
-                }
 
                 ScreenState.PLAYER -> {
                     val current = playingChannel
@@ -249,7 +240,8 @@ fun MainMobiStreamApp(
                                                     screenState = ScreenState.PLAYER
                                                 },
                                                 onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
-                                                onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) }
+                                                onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
+                                                onFetchLanguageChannels = viewModel::fetchLanguageChannels
                                             )
                                         }
 

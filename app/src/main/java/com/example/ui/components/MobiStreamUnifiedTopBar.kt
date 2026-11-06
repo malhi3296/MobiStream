@@ -78,23 +78,15 @@ fun MobiStreamUnifiedTopBar(
                     .size(34.dp)
                     .clip(RoundedCornerShape(9.dp))
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Mobi",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = brandTextColor
-                )
-                Text(
-                    text = "Stream",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = if (isDark) GlowLilac else StreamViolet
-                )
-            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "MOBISTREAM",
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 17.sp,
+                letterSpacing = 1.8.sp,
+                color = brandTextColor
+            )
         }
 
         // Right Top Actions:

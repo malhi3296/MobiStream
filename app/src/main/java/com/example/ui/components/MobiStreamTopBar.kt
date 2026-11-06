@@ -85,22 +85,14 @@ fun MobiStreamTopBar(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Mobi",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = TextWhite
-                        )
-                        Text(
-                            text = "Stream",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = GlowLilac
-                        )
-                    }
+                    Text(
+                        text = "MOBISTREAM",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp,
+                        letterSpacing = 1.8.sp,
+                        color = TextWhite
+                    )
                     Text(
                         text = "Streaming made mobile",
                         fontFamily = InterFontFamily,
