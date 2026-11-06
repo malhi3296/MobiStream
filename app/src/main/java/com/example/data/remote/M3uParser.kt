@@ -112,7 +112,7 @@ object M3uParser {
         val cleanName = cleanChannelName(rawTitle)
         val countryCode = detectCountryCode(tvgId, tvgCountry, cleanName)
         val countryName = countryCodeToName(countryCode)
-        val language = detectLanguage(tvgLanguage, countryCode)
+        val language = detectLanguage(tvgLanguage, countryCode, cleanName, tvgId)
 
         val id = if (!tvgId.isNullOrBlank()) {
             tvgId
@@ -244,10 +244,33 @@ object M3uParser {
         }
     }
 
-    private fun detectLanguage(tvgLang: String?, countryCode: String): String {
+    private fun detectLanguage(tvgLang: String?, countryCode: String, name: String, tvgId: String?): String {
+        val lower = "$name $tvgId".lowercase(Locale.ROOT)
+        if (lower.contains("punjabi") || lower.contains("ptc") || lower.contains("mh1") || lower.contains("chardikla") || lower.contains(".pan@")) {
+            return "Punjabi"
+        }
+        if (lower.contains("tamil") || lower.contains(".tam@")) return "Tamil"
+        if (lower.contains("telugu") || lower.contains(".tel@")) return "Telugu"
+        if (lower.contains("bengali") || lower.contains("bangla") || lower.contains(".ben@")) return "Bengali"
+        if (lower.contains("urdu") || lower.contains(".urd@")) return "Urdu"
+        if (lower.contains("malayalam") || lower.contains(".mal@")) return "Malayalam"
+        if (lower.contains("kannada") || lower.contains(".kan@")) return "Kannada"
+        if (lower.contains("marathi") || lower.contains(".mar@")) return "Marathi"
+        if (lower.contains("gujarati") || lower.contains(".guj@")) return "Gujarati"
+
         if (!tvgLang.isNullOrBlank()) {
             val langParts = tvgLang.split(';', ',').map { it.trim() }
             val first = langParts.firstOrNull() ?: ""
+            if (first.equals("pan", ignoreCase = true) || first.equals("pa", ignoreCase = true)) return "Punjabi"
+            if (first.equals("hin", ignoreCase = true) || first.equals("hi", ignoreCase = true)) return "Hindi"
+            if (first.equals("urd", ignoreCase = true) || first.equals("ur", ignoreCase = true)) return "Urdu"
+            if (first.equals("tam", ignoreCase = true) || first.equals("ta", ignoreCase = true)) return "Tamil"
+            if (first.equals("tel", ignoreCase = true) || first.equals("te", ignoreCase = true)) return "Telugu"
+            if (first.equals("ben", ignoreCase = true) || first.equals("bn", ignoreCase = true)) return "Bengali"
+            if (first.equals("mal", ignoreCase = true) || first.equals("ml", ignoreCase = true)) return "Malayalam"
+            if (first.equals("kan", ignoreCase = true) || first.equals("kn", ignoreCase = true)) return "Kannada"
+            if (first.equals("mar", ignoreCase = true) || first.equals("mr", ignoreCase = true)) return "Marathi"
+            if (first.equals("guj", ignoreCase = true) || first.equals("gu", ignoreCase = true)) return "Gujarati"
             if (first.length in 2..3) {
                 val display = Locale(first).displayLanguage
                 if (display.isNotBlank() && !display.equals(first, ignoreCase = true)) {
@@ -264,6 +287,7 @@ object M3uParser {
             "IT" -> "Italian"
             "BR", "PT" -> "Portuguese"
             "IN" -> "Hindi"
+            "PK" -> "Urdu"
             "TR" -> "Turkish"
             "RU" -> "Russian"
             "UA" -> "Ukrainian"

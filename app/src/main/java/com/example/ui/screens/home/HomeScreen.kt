@@ -42,9 +42,7 @@ import com.example.data.model.Channel
 import com.example.domain.FilterOptions
 import com.example.ui.components.CountryChannelCard
 import com.example.ui.components.DynamicHeroSlideshow
-import com.example.ui.components.FilterBottomSheet
 import com.example.ui.components.GenreGlowingBubble
-import com.example.ui.components.MobiStreamHomeHeader
 import com.example.ui.components.PinnedAndFavCard
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.TrendingStreamItem
@@ -60,13 +58,12 @@ import com.example.ui.theme.TextDarkPrimary
 import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.viewmodel.SlideShowItem
 
-import com.example.ui.components.MobiStreamUnifiedTopBar
-
 @Composable
 fun HomeScreen(
     slides: List<SlideShowItem>,
     pinnedAndFavorites: List<Channel>,
     countryChannels: List<Channel>,
+    globalPopularChannels: List<Channel>,
     trendingChannels: List<Channel>,
     categories: List<Category>,
     detectedCountryName: String,
@@ -84,7 +81,6 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showFilterSheet by remember { mutableStateOf(false) }
     val isDark = MaterialTheme.colorScheme.background != Color.White
 
     Box(
@@ -105,18 +101,17 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Dynamic 5-slide Hero Carousel
+                // 1. Dynamic 5-slide Hero Carousel (rotates content every 30 mins)
                 if (slides.isNotEmpty()) {
                     item {
                         DynamicHeroSlideshow(
-
                             slides = slides,
                             onSlideClick = onSelectChannel
                         )
                     }
                 }
 
-                // 3. Requirement 9: "Pinned & Favourites" section instead of popular channels (pinned channels strictly first)
+                // 2. Requirement 9 & 7: "Pinned & Favourites" section with smaller cards (pinned first)
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
                     SectionHeader(
@@ -127,7 +122,7 @@ fun HomeScreen(
                     if (pinnedAndFavorites.isNotEmpty()) {
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         ) {
                             items(pinnedAndFavorites) { channel ->
@@ -190,7 +185,7 @@ fun HomeScreen(
                     }
                 }
 
-                // 4. Requirement 6: "Popular in [Country Name]" instead of featured streams
+                // 3. Requirement 6: "Popular in [Country Name]" section
                 item {
                     Spacer(modifier = Modifier.height(14.dp))
                     val countryFlag = getCountryFlag(detectedCountryCode)
@@ -214,7 +209,32 @@ fun HomeScreen(
                     }
                 }
 
-                // 5. Trending Live Streams
+                // 4. Requirement 15: "Popular Global Channels" section directly under "Popular in India/Country"
+                if (globalPopularChannels.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        SectionHeader(
+                            title = "Popular Global Channels",
+                            onSeeAllClick = onNavigateToExplore
+                        )
+
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            items(globalPopularChannels) { channel ->
+                                CountryChannelCard(
+                                    channel = channel,
+                                    onPlayClick = { onSelectChannel(channel) },
+                                    onToggleFavorite = { onToggleFavorite(channel.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 5. Requirement 11: Trending Live Streams (rotated every 2 hours)
                 if (trendingChannels.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(14.dp))
@@ -233,15 +253,15 @@ fun HomeScreen(
                     }
                 }
 
-                // 6. Genres glowing radial bubbles
+                // 6. Requirement 6: Categories (Working: clicks navigate directly to Explore and open that category)
                 item {
                     Spacer(modifier = Modifier.height(14.dp))
                     SectionHeader(
-                        title = "Genres",
+                        title = "Categories",
                         onSeeAllClick = onNavigateToExplore
                     )
 
-                    val genreItems = listOf(
+                    val categoryBubbles = listOf(
                         "Sports" to GenreSportsGradient,
                         "News" to GenreNewsGradient,
                         "Movies" to GenreMoviesGradient,
@@ -254,7 +274,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
                     ) {
-                        items(genreItems) { (name, gradient) ->
+                        items(categoryBubbles) { (name, gradient) ->
                             GenreGlowingBubble(
                                 label = name,
                                 gradient = gradient,

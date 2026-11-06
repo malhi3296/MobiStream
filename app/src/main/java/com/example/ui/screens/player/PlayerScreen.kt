@@ -10,12 +10,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -40,18 +38,21 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -77,6 +78,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.example.data.model.Channel
+import com.example.domain.EpgProvider
 import com.example.ui.components.ChannelCard
 import com.example.ui.components.StreamTagBadge
 import com.example.ui.components.StreamTagType
@@ -106,19 +108,34 @@ fun PlayerScreen(
     val context = LocalContext.current
     val activity = context as? Activity
 
-    var isFullscreen by remember { mutableStateOf(false) }
+    // Requirement 3: Auto open all channels in landscape mode (full screen)
+    var isFullscreen by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(true) }
     var isBuffering by remember { mutableStateOf(true) }
     var streamError by remember { mutableStateOf<String?>(null) }
     var isMuted by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
-    var resizeModeIndex by remember { mutableStateOf(0) }
+    var resizeModeIndex by remember { mutableIntStateOf(0) }
+
+    val epgInfo = remember(channel.id) {
+        EpgProvider.getEpgForChannel(channel)
+    }
 
     val resizeModes = listOf(
         AspectRatioFrameLayout.RESIZE_MODE_FIT,
         AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
         AspectRatioFrameLayout.RESIZE_MODE_FILL
     )
+
+    // Set landscape orientation immediately on entering PlayerScreen
+    LaunchedEffect(Unit) {
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+    }
+
+    val handleExitPlayer = {
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onBack()
+    }
 
     // ExoPlayer Instance
     val exoPlayer = remember(channel.id) {
@@ -153,25 +170,20 @@ fun PlayerScreen(
         onDispose {
             exoPlayer.removeListener(listener)
             exoPlayer.release()
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 
-    // Auto-hide controls after 4 seconds
+    // Auto-hide controls after 4.5 seconds
     LaunchedEffect(showControls, isPlaying) {
         if (showControls && isPlaying) {
-            delay(4000)
+            delay(4500)
             showControls = false
         }
     }
 
     BackHandler {
-        if (isFullscreen) {
-            isFullscreen = false
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        } else {
-            onBack()
-        }
+        handleExitPlayer()
     }
 
     Box(
@@ -181,7 +193,7 @@ fun PlayerScreen(
             .testTag("player_screen")
     ) {
         if (isFullscreen) {
-            // Fullscreen Player Mode
+            // Fullscreen Landscape Player Mode (Default)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -213,10 +225,11 @@ fun PlayerScreen(
                     isMuted = isMuted,
                     isFullscreen = true,
                     showControls = showControls,
-                    onBack = {
-                        isFullscreen = false
-                        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    },
+                    epgProgramTitle = epgInfo.currentTitle,
+                    epgTimeSlot = epgInfo.timeSlot,
+                    epgProgress = epgInfo.elapsedPercent,
+                    epgNextTitle = epgInfo.nextTitle,
+                    onBack = handleExitPlayer,
                     onTogglePlay = {
                         if (exoPlayer.isPlaying) {
                             exoPlayer.pause()
@@ -247,7 +260,7 @@ fun PlayerScreen(
                 )
             }
         } else {
-            // Portrait Mode: Player + Channel Info + Related Channels
+            // Portrait Mode fallback: Player + Channel Info + EPG Schedule + Related Channels
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -289,7 +302,11 @@ fun PlayerScreen(
                         isMuted = isMuted,
                         isFullscreen = false,
                         showControls = showControls,
-                        onBack = onBack,
+                        epgProgramTitle = epgInfo.currentTitle,
+                        epgTimeSlot = epgInfo.timeSlot,
+                        epgProgress = epgInfo.elapsedPercent,
+                        epgNextTitle = epgInfo.nextTitle,
+                        onBack = handleExitPlayer,
                         onTogglePlay = {
                             if (exoPlayer.isPlaying) {
                                 exoPlayer.pause()
@@ -368,12 +385,9 @@ fun PlayerScreen(
                                         color = TextMuted
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(text = "•", color = TextMuted)
-                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = channel.language,
+                                        text = "• ${channel.category}",
                                         fontFamily = InterFontFamily,
-                                        fontWeight = FontWeight.Normal,
                                         fontSize = 12.sp,
                                         color = GlowLilac
                                     )
@@ -394,6 +408,92 @@ fun PlayerScreen(
                                 contentDescription = "Toggle favorite",
                                 tint = if (channel.isFavorite) LiveRed else Color.White,
                                 modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // EPG Live Program Card (Requirement 10)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MidnightCard,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MidnightCardBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        tint = GlowLilac,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "LIVE EPG PROGRAM",
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = GlowLilac
+                                    )
+                                }
+
+                                Text(
+                                    text = epgInfo.timeSlot,
+                                    fontFamily = InterFontFamily,
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = epgInfo.currentTitle,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextWhite
+                            )
+
+                            Text(
+                                text = epgInfo.currentDescription,
+                                fontFamily = InterFontFamily,
+                                fontSize = 12.sp,
+                                color = TextMuted,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            LinearProgressIndicator(
+                                progress = { epgInfo.elapsedPercent },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                                color = StreamViolet,
+                                trackColor = Color(0xFF281E57)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Up Next: ${epgInfo.nextTitle} (${epgInfo.nextTime})",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp,
+                                color = GlowLilac
                             )
                         }
                     }
@@ -439,7 +539,7 @@ fun PlayerScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(relatedChannels.filter { it.id != channel.id }.take(10)) { relChannel ->
-                            Box(modifier = Modifier.width(160.dp)) {
+                            Box(modifier = Modifier.width(150.dp)) {
                                 ChannelCard(
                                     channel = relChannel,
                                     onClick = { onSelectChannel(relChannel) },
@@ -465,6 +565,10 @@ private fun PlayerControlsOverlay(
     isMuted: Boolean,
     isFullscreen: Boolean,
     showControls: Boolean,
+    epgProgramTitle: String,
+    epgTimeSlot: String,
+    epgProgress: Float,
+    epgNextTitle: String,
     onBack: () -> Unit,
     onTogglePlay: () -> Unit,
     onToggleMute: () -> Unit,
@@ -484,13 +588,13 @@ private fun PlayerControlsOverlay(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xCC000000),
+                            Color(0xD9000000),
                             Color(0x33000000),
-                            Color(0xCC000000)
+                            Color(0xEE000000)
                         )
                     )
                 )
-                .padding(16.dp)
+                .padding(horizontal = 20.dp, vertical = 14.dp)
         ) {
             // Top Bar: Back, Channel Name, Favorite, Badges
             Row(
@@ -517,22 +621,53 @@ private fun PlayerControlsOverlay(
                             tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = channel.name,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = TextWhite,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = channel.name,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = TextWhite,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${getCountryFlag(channel.countryCode)} ${channel.country}",
+                                fontFamily = InterFontFamily,
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "• ${channel.category}",
+                                fontFamily = InterFontFamily,
+                                fontSize = 11.sp,
+                                color = GlowLilac
+                            )
+                        }
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StreamTagBadge(type = StreamTagType.LIVE)
                     Spacer(modifier = Modifier.width(6.dp))
                     StreamTagBadge(type = StreamTagType.QUALITY_4K, customText = channel.quality)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0x800E0A24), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (channel.isFavorite) LiveRed else Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -592,57 +727,110 @@ private fun PlayerControlsOverlay(
                 }
             }
 
-            // Bottom Bar: Mute, Aspect Ratio, Fullscreen
-            Row(
+            // Bottom Bar: EPG Info Bar (Requirement 10) + Controls
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .align(Alignment.BottomCenter)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StreamTagBadge(type = StreamTagType.LIVE)
+                // EPG Live Stream Overlay Banner
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(LiveRed)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = "LIVE NOW",
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 8.sp,
+                                    color = Color.White
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = epgProgramTitle,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "($epgTimeSlot)",
+                                fontFamily = InterFontFamily,
+                                fontSize = 10.sp,
+                                color = GlowLilac
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Next: $epgNextTitle",
+                            fontFamily = InterFontFamily,
+                            fontSize = 10.sp,
+                            color = TextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "LIVE STREAM",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        color = Color.White
-                    )
-                }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Mute / Unmute
-                    IconButton(onClick = onToggleMute) {
-                        Icon(
-                            imageVector = if (isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
-                            contentDescription = if (isMuted) "Unmute" else "Mute",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Mute / Unmute
+                        IconButton(onClick = onToggleMute) {
+                            Icon(
+                                imageVector = if (isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                                contentDescription = if (isMuted) "Unmute" else "Mute",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                    // Aspect Ratio / Fit mode
-                    IconButton(onClick = onToggleResize) {
-                        Icon(
-                            imageVector = Icons.Default.AspectRatio,
-                            contentDescription = "Aspect ratio",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                        // Aspect Ratio
+                        IconButton(onClick = onToggleResize) {
+                            Icon(
+                                imageVector = Icons.Default.AspectRatio,
+                                contentDescription = "Aspect ratio",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                    // Fullscreen toggle
-                    IconButton(onClick = onToggleFullscreen) {
-                        Icon(
-                            imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                            contentDescription = "Toggle Fullscreen",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        // Fullscreen toggle
+                        IconButton(onClick = onToggleFullscreen) {
+                            Icon(
+                                imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                contentDescription = "Toggle Fullscreen",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
+
+                // EPG Live Elapsed Progress Bar
+                LinearProgressIndicator(
+                    progress = { epgProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = StreamViolet,
+                    trackColor = Color(0x4DFFFFFF)
+                )
             }
         }
     }

@@ -344,18 +344,19 @@ fun PinnedAndFavCard(
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background != Color.White
-    val cardShape = RoundedCornerShape(20.dp)
+    val cardShape = RoundedCornerShape(14.dp)
 
     Column(
         modifier = modifier
-            .width(155.dp)
+            .width(115.dp)
             .clickable { onClick() }
             .testTag("pinned_fav_card_${channel.id}"),
         horizontalAlignment = Alignment.Start
     ) {
         Box(
             modifier = Modifier
-                .size(155.dp)
+                .width(115.dp)
+                .height(85.dp)
                 .clip(cardShape)
                 .background(if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F9))
                 .border(
@@ -371,7 +372,7 @@ fun PinnedAndFavCard(
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(22.dp)
+                        .padding(12.dp)
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -379,7 +380,7 @@ fun PinnedAndFavCard(
                         imageVector = Icons.Default.Tv,
                         contentDescription = null,
                         tint = if (isDark) Color.White else TextDarkPrimary,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
@@ -388,29 +389,29 @@ fun PinnedAndFavCard(
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(5.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 if (channel.isPinned) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(Color(0xFFFFB300))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.PushPin,
                                 contentDescription = null,
                                 tint = Color.Black,
-                                modifier = Modifier.size(10.dp)
+                                modifier = Modifier.size(8.dp)
                             )
-                            Spacer(modifier = Modifier.width(2.dp))
+                            Spacer(modifier = Modifier.width(1.dp))
                             Text(
-                                text = "PINNED",
+                                text = "PIN",
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 color = Color.Black
                             )
                         }
@@ -418,78 +419,55 @@ fun PinnedAndFavCard(
                 } else if (channel.isFavorite) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(LiveRed)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Text(
                             text = "FAV",
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp,
+                            fontSize = 8.sp,
                             color = Color.White
                         )
                     }
                 }
             }
 
-            // Pin & Favorite action icons on Top Right
-            Row(
+            // Pin toggle on top-right
+            IconButton(
+                onClick = onTogglePin,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp)
-            ) {
-                IconButton(
-                    onClick = onTogglePin,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = if (channel.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                        contentDescription = "Pin channel",
-                        tint = if (channel.isPinned) Color(0xFFFFB300) else if (isDark) Color.White else TextDarkSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // Signature Circular Play Button docked at bottom-right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFF19191B))
-                    .clickable { onClick() },
-                contentAlignment = Alignment.Center
+                    .padding(2.dp)
+                    .size(22.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+                    imageVector = if (channel.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                    contentDescription = "Pin channel",
+                    tint = if (channel.isPinned) Color(0xFFFFB300) else if (isDark) Color.White else TextDarkSecondary,
+                    modifier = Modifier.size(13.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = channel.name,
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
+            fontSize = 12.sp,
             color = if (isDark) Color.White else TextDarkPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
 
         Text(
-            text = "${getCountryFlag(channel.countryCode)} ${channel.country} • ${channel.category}",
+            text = channel.category,
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
+            fontSize = 10.sp,
             color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -498,8 +476,7 @@ fun PinnedAndFavCard(
 }
 
 /**
- * Localized Country Channel Card matching Requirement 6:
- * Displays channels from user's detected country
+ * Localized Country Channel Card matching screenshot format (ICON_0f5a79ef.png)
  */
 @Composable
 fun CountryChannelCard(
@@ -509,117 +486,145 @@ fun CountryChannelCard(
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background != Color.White
-    val cardShape = RoundedCornerShape(20.dp)
+    val cardShape = RoundedCornerShape(16.dp)
 
-    Column(
+    val cardGradient = Brush.verticalGradient(
+        colors = listOf(
+            if (isDark) Color(0xFF2C2746) else Color(0xFFECEEF8),
+            if (isDark) Color(0xFF18142A) else Color(0xFFDFE2F2),
+            if (isDark) Color(0xFF0C0918) else Color(0xFFD3D7EB)
+        )
+    )
+
+    val borderColor = if (isDark) Color(0xFF383256) else Color(0xFFD4D8EC)
+
+    Box(
         modifier = modifier
-            .width(155.dp)
+            .width(150.dp)
+            .height(165.dp)
+            .clip(cardShape)
+            .border(1.dp, borderColor, cardShape)
+            .background(cardGradient)
             .clickable { onPlayClick() }
             .testTag("country_channel_card_${channel.id}")
     ) {
+        // Logo in Center Upper
         Box(
             modifier = Modifier
-                .size(155.dp)
-                .clip(cardShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            if (isDark) Color(0xFF2C2266) else Color(0xFFE8E9F4),
-                            if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4FB)
-                        )
-                    )
-                )
+                .fillMaxWidth()
+                .height(110.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
         ) {
             if (channel.logoUrl.isNotBlank()) {
                 AsyncImage(
                     model = channel.logoUrl,
                     contentDescription = channel.name,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = channel.name.take(2).uppercase(),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp,
-                        color = StreamViolet
-                    )
-                }
-            }
-
-            // Top Left LIVE and Country flag
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StreamTagBadge(type = StreamTagType.LIVE)
-            }
-
-            // Top Right Favorite toggle
-            IconButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(28.dp)
-            ) {
-                Icon(
-                    imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (channel.isFavorite) LiveRed else if (isDark) Color.White else TextDarkSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            // Circular Play Button
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFF19191B))
-                    .clickable { onPlayClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+                Text(
+                    text = channel.name.take(2).uppercase(),
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = StreamViolet
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        // Top Right Favorite Button
+        IconButton(
+            onClick = onToggleFavorite,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(30.dp)
+                .background(Color(0x660E0A24), CircleShape)
+        ) {
+            Icon(
+                imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = "Favorite",
+                tint = if (channel.isFavorite) LiveRed else Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+        }
 
-        Text(
-            text = channel.name,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        // Bottom overlay with channel info, category pill, and flag + uppercase country
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0xCC000000),
+                            Color(0xF2070512)
+                        )
+                    )
+                )
+                .padding(horizontal = 9.dp, vertical = 7.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = channel.name,
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
 
-        Text(
-            text = "${getCountryFlag(channel.countryCode)} ${channel.country} • ${channel.category}",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(Color(0xFFE4D6FF))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = channel.category,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 9.sp,
+                            color = Color(0xFF5322B8)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = getCountryFlag(channel.countryCode),
+                        fontSize = 10.sp
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = channel.country.uppercase(),
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 9.sp,
+                        color = Color(0xFFD6D3E8),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -11,6 +11,9 @@ import com.example.data.model.Country
 import com.example.data.model.Language
 import com.example.data.repository.ChannelRepository
 import com.example.domain.FilterOptions
+import com.example.domain.GroupType
+import com.example.domain.SelectedGroup
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class SlideShowItem(
@@ -58,6 +62,14 @@ class MobiStreamViewModel(
     )
     val uiState: StateFlow<MobiUiState> = _uiState.asStateFlow()
 
+    // Hoisted Selected Explore Group so back navigation from Player preserves channel list
+    private val _selectedExploreGroup = MutableStateFlow<SelectedGroup?>(null)
+    val selectedExploreGroup: StateFlow<SelectedGroup?> = _selectedExploreGroup.asStateFlow()
+
+    // Rotation ticks for slideshow (every 30 mins) and trending (every 2 hours)
+    private val _slideshowTick = MutableStateFlow(0)
+    private val _trendingTick = MutableStateFlow(0)
+
     val allChannels: StateFlow<List<Channel>> = repository.allChannels
         .stateIn(
             scope = viewModelScope,
@@ -80,16 +92,17 @@ class MobiStreamViewModel(
             initialValue = emptyList()
         )
 
-    // Slideshow with 5 slides: News with current news bg, Global live sports, and 3 random program sliders
-    val homeSlideshow: StateFlow<List<SlideShowItem>> = repository.allChannels
-        .combine(_uiState) { channels, _ ->
-            generateSlideshow(channels)
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    // Slideshow with 5 slides rotated every 30 minutes
+    val homeSlideshow: StateFlow<List<SlideShowItem>> = combine(
+        repository.allChannels,
+        _slideshowTick
+    ) { channels, tick ->
+        generateSlideshow(channels, tick)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     // Channels filtered by user's detected country
     val countryChannels: StateFlow<List<Channel>> = combine(
@@ -102,6 +115,40 @@ class MobiStreamViewModel(
                     it.country.contains(state.detectedCountryName, ignoreCase = true)
         }
         if (matched.isNotEmpty()) matched else channels.take(10)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Popular Global Channels (ESPN, BBC, CNN, Eurosport, Sky News, Red Bull, Bloomberg, France 24, MTV, Cartoon Network)
+    val globalPopularChannels: StateFlow<List<Channel>> = repository.allChannels.combine(_uiState) { channels, _ ->
+        val globalKeywords = listOf(
+            "espn", "bbc", "cnn", "eurosport", "sky news", "red bull",
+            "bloomberg", "france 24", "mtv", "cartoon network", "al jazeera", "reuters", "dw news"
+        )
+        val matched = channels.filter { ch ->
+            val nameLower = ch.name.lowercase()
+            globalKeywords.any { kw -> nameLower.contains(kw) }
+        }
+        if (matched.isNotEmpty()) matched else channels.take(10)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Trending channels updated every 2 hours
+    val trendingChannels: StateFlow<List<Channel>> = combine(
+        repository.allChannels,
+        _trendingTick
+    ) { channels, tick ->
+        if (channels.isEmpty()) return@combine emptyList<Channel>()
+        val featured = channels.filter { it.isFeatured }
+        val pool = if (featured.isNotEmpty()) featured else channels
+        val offset = (tick * 5) % pool.size
+        val rotated = pool.drop(offset) + pool.take(offset)
+        rotated.take(10)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -149,6 +196,81 @@ class MobiStreamViewModel(
             )
         }
         loadData()
+        startPeriodicUpdaters()
+    }
+
+    private fun startPeriodicUpdaters() {
+        // Slideshow ticker: updates every 30 minutes
+        viewModelScope.launch {
+            while (isActive) {
+                delay(30 * 60 * 1000L)
+                _slideshowTick.update { it + 1 }
+            }
+        }
+        // Trending ticker: updates every 2 hours
+        viewModelScope.launch {
+            while (isActive) {
+                delay(2 * 60 * 60 * 1000L)
+                _trendingTick.update { it + 1 }
+            }
+        }
+    }
+
+    fun selectExploreGroup(group: SelectedGroup?) {
+        _selectedExploreGroup.value = group
+    }
+
+    fun selectExploreCategory(categoryName: String) {
+        _selectedExploreGroup.value = SelectedGroup(
+            type = GroupType.CATEGORY,
+            title = categoryName,
+            identifier = categoryName
+        )
+    }
+
+    fun selectExploreCountry(countryCode: String, countryName: String, flag: String) {
+        _selectedExploreGroup.value = SelectedGroup(
+            type = GroupType.COUNTRY,
+            title = "$flag $countryName",
+            identifier = countryCode
+        )
+    }
+
+    fun selectExploreLanguage(languageName: String) {
+        _selectedExploreGroup.value = SelectedGroup(
+            type = GroupType.LANGUAGE,
+            title = "$languageName Channels",
+            identifier = languageName
+        )
+    }
+
+    /**
+     * Requirement 14: In explore, every category all popular global channels should be at top
+     * like ESPN for sports, CNN for news, HBO/Retro for movies, etc.
+     */
+    fun sortCategoryChannels(category: String, channels: List<Channel>): List<Channel> {
+        val priorityKeywords = when (category.lowercase()) {
+            "sports" -> listOf("espn", "bein", "sky sports", "eurosport", "fox sports", "red bull", "willow", "star sports", "sony")
+            "news" -> listOf("cnn", "bbc", "sky news", "al jazeera", "reuters", "bloomberg", "dw", "france 24", "ndtv", "india today", "dd news")
+            "movies", "series", "entertainment" -> listOf("hbo", "paramount", "starz", "cinemax", "filmrise", "retro", "rakuten", "cinema")
+            "kids", "animation" -> listOf("cartoon network", "disney", "nickelodeon", "toon", "boomerang", "pbs kids")
+            "music" -> listOf("mtv", "vh1", "stingray", "clubbing", "trace", "kiss", "9xm", "b4u")
+            else -> listOf("global", "live", "hd", "news", "tv")
+        }
+
+        return channels.sortedWith { a, b ->
+            val aName = a.name.lowercase()
+            val bName = b.name.lowercase()
+            val aMatch = priorityKeywords.indexOfFirst { aName.contains(it) }
+            val bMatch = priorityKeywords.indexOfFirst { bName.contains(it) }
+
+            when {
+                aMatch != -1 && bMatch != -1 -> aMatch.compareTo(bMatch)
+                aMatch != -1 -> -1
+                bMatch != -1 -> 1
+                else -> a.name.compareTo(b.name, ignoreCase = true)
+            }
+        }
     }
 
     fun loadData(forceRefresh: Boolean = false) {
@@ -262,16 +384,20 @@ class MobiStreamViewModel(
         _uiState.update { it.copy(streamBufferMode = mode) }
     }
 
-    private fun generateSlideshow(channels: List<Channel>): List<SlideShowItem> {
+    private fun generateSlideshow(channels: List<Channel>, tick: Int = 0): List<SlideShowItem> {
         if (channels.isEmpty()) return emptyList()
 
         val slides = mutableListOf<SlideShowItem>()
 
         // 1. News channel with current news program background
-        val newsChannel = channels.firstOrNull { it.category.equals("News", ignoreCase = true) } ?: channels[0]
+        val newsChannels = channels.filter { it.category.equals("News", ignoreCase = true) }
+        val newsChannel = if (newsChannels.isNotEmpty()) {
+            newsChannels[(tick) % newsChannels.size]
+        } else channels[0]
+
         slides.add(
             SlideShowItem(
-                id = "slide_news",
+                id = "slide_news_${newsChannel.id}",
                 channel = newsChannel,
                 programTitle = "Breaking World News Bulletin",
                 programSubtitle = "${newsChannel.name} • Live Global Reporting",
@@ -284,11 +410,14 @@ class MobiStreamViewModel(
         )
 
         // 2. Most important live sports event (global)
-        val sportsChannel = channels.firstOrNull { it.category.equals("Sports", ignoreCase = true) && it.id != newsChannel.id }
-            ?: channels.getOrNull(1) ?: channels[0]
+        val sportsChannels = channels.filter { it.category.equals("Sports", ignoreCase = true) && it.id != newsChannel.id }
+        val sportsChannel = if (sportsChannels.isNotEmpty()) {
+            sportsChannels[(tick) % sportsChannels.size]
+        } else channels.getOrNull(1) ?: channels[0]
+
         slides.add(
             SlideShowItem(
-                id = "slide_sports",
+                id = "slide_sports_${sportsChannel.id}",
                 channel = sportsChannel,
                 programTitle = "World Football Championship",
                 programSubtitle = "${sportsChannel.name} • Live Stadium Broadcast",
@@ -301,11 +430,14 @@ class MobiStreamViewModel(
         )
 
         // 3. Random slider 3 (Movies / Entertainment)
-        val movieChannel = channels.firstOrNull { it.category.equals("Movies", ignoreCase = true) && it.id != newsChannel.id && it.id != sportsChannel.id }
-            ?: channels.getOrNull(2) ?: channels[0]
+        val movieChannels = channels.filter { it.category.equals("Movies", ignoreCase = true) && it.id != newsChannel.id && it.id != sportsChannel.id }
+        val movieChannel = if (movieChannels.isNotEmpty()) {
+            movieChannels[(tick) % movieChannels.size]
+        } else channels.getOrNull(2) ?: channels[0]
+
         slides.add(
             SlideShowItem(
-                id = "slide_movie",
+                id = "slide_movie_${movieChannel.id}",
                 channel = movieChannel,
                 programTitle = "Cinema Classics: Prime Feature",
                 programSubtitle = "${movieChannel.name} • FHD Broadcast",
@@ -318,11 +450,14 @@ class MobiStreamViewModel(
         )
 
         // 4. Random slider 4 (Music / Concerts)
-        val musicChannel = channels.firstOrNull { it.category.equals("Music", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
-            ?: channels.getOrNull(3) ?: channels[0]
+        val musicChannels = channels.filter { it.category.equals("Music", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
+        val musicChannel = if (musicChannels.isNotEmpty()) {
+            musicChannels[(tick) % musicChannels.size]
+        } else channels.getOrNull(3) ?: channels[0]
+
         slides.add(
             SlideShowItem(
-                id = "slide_music",
+                id = "slide_music_${musicChannel.id}",
                 channel = musicChannel,
                 programTitle = "World Live Tour Concerts",
                 programSubtitle = "${musicChannel.name} • Non-stop Hits",
@@ -335,11 +470,14 @@ class MobiStreamViewModel(
         )
 
         // 5. Random slider 5 (Documentary / Nature)
-        val docChannel = channels.firstOrNull { it.category.equals("Documentary", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
-            ?: channels.getOrNull(4) ?: channels[0]
+        val docChannels = channels.filter { it.category.equals("Documentary", ignoreCase = true) && it.id !in slides.map { s -> s.channel.id } }
+        val docChannel = if (docChannels.isNotEmpty()) {
+            docChannels[(tick) % docChannels.size]
+        } else channels.getOrNull(4) ?: channels[0]
+
         slides.add(
             SlideShowItem(
-                id = "slide_doc",
+                id = "slide_doc_${docChannel.id}",
                 channel = docChannel,
                 programTitle = "Planet Frontiers Exploration",
                 programSubtitle = "${docChannel.name} • 4K Wildlife & Science",

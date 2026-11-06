@@ -34,6 +34,8 @@ import com.example.ui.theme.InterFontFamily
 import com.example.ui.theme.StreamViolet
 import com.example.ui.theme.TextDarkPrimary
 
+import androidx.compose.foundation.layout.statusBarsPadding
+
 /**
  * Unified Top Bar visible throughout the entire app:
  * - Left top: Logo and MobiStream name
@@ -59,7 +61,8 @@ fun MobiStreamUnifiedTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

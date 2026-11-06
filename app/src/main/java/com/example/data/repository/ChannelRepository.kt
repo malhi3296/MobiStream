@@ -225,21 +225,47 @@ class ChannelRepository(
                 )
             }
             .filter { it.name.isNotBlank() && it.code != "INT" }
-            .sortedByDescending { it.channelCount }
+            .sortedBy { it.name }
     }
 
     suspend fun getAvailableLanguages(): List<Language> = withContext(Dispatchers.IO) {
         val channels = channelDao.getAllChannels().first()
-        channels.groupBy { it.language }
+        val indianPriority = listOf(
+            "Punjabi", "Hindi", "English", "Urdu", "Tamil",
+            "Telugu", "Bengali", "Malayalam", "Kannada", "Marathi", "Gujarati"
+        )
+
+        val languageMap = channels.groupBy { it.language }
             .filter { it.key.isNotBlank() }
-            .map { (lang, list) ->
+            .mapValues { it.value.size }
+
+        val result = mutableListOf<Language>()
+
+        // 1. Indian priority languages at top (especially Punjabi first)
+        for (lang in indianPriority) {
+            val count = languageMap[lang] ?: 0
+            result.add(
                 Language(
                     code = lang.lowercase().take(2),
                     name = lang,
-                    channelCount = list.size
+                    channelCount = count
+                )
+            )
+        }
+
+        // 2. All other languages sorted alphabetically
+        val others = languageMap.keys
+            .filter { it !in indianPriority }
+            .sorted()
+            .map { lang ->
+                Language(
+                    code = lang.lowercase().take(2),
+                    name = lang,
+                    channelCount = languageMap[lang] ?: 0
                 )
             }
-            .sortedByDescending { it.channelCount }
+
+        result + others
     }
 
     private fun getCountryEmoji(countryCode: String): String {

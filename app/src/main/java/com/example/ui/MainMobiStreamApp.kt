@@ -54,8 +54,11 @@ fun MainMobiStreamApp(
     val filteredChannels by viewModel.filteredChannels.collectAsStateWithLifecycle()
     val pinnedAndFavorites by viewModel.pinnedAndFavorites.collectAsStateWithLifecycle()
     val countryChannels by viewModel.countryChannels.collectAsStateWithLifecycle()
+    val globalPopularChannels by viewModel.globalPopularChannels.collectAsStateWithLifecycle()
+    val trendingChannels by viewModel.trendingChannels.collectAsStateWithLifecycle()
     val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
     val slideshowItems by viewModel.homeSlideshow.collectAsStateWithLifecycle()
+    val selectedExploreGroup by viewModel.selectedExploreGroup.collectAsStateWithLifecycle()
 
     var screenState by remember { mutableStateOf(ScreenState.SPLASH) }
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
@@ -107,6 +110,7 @@ fun MainMobiStreamApp(
                             channel = current,
                             relatedChannels = related,
                             onBack = {
+                                // Returning from player retains exact channel list state in Explore
                                 screenState = ScreenState.MAIN
                             },
                             onToggleFavorite = { id ->
@@ -135,7 +139,7 @@ fun MainMobiStreamApp(
 
                     Scaffold(
                         topBar = {
-                            // Persistent Top Bar across entire app (Home, Explore, Favourites, Settings, Category details)
+                            // Persistent Top Bar across entire app (safely padded below notification bar)
                             MobiStreamUnifiedTopBar(
                                 isDarkMode = uiState.isDarkMode,
                                 onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
@@ -193,7 +197,8 @@ fun MainMobiStreamApp(
                                                 slides = slideshowItems,
                                                 pinnedAndFavorites = pinnedAndFavorites,
                                                 countryChannels = countryChannels,
-                                                trendingChannels = allChannels,
+                                                globalPopularChannels = globalPopularChannels,
+                                                trendingChannels = trendingChannels,
                                                 categories = uiState.availableCategories,
                                                 detectedCountryName = uiState.detectedCountryName,
                                                 detectedCountryCode = uiState.detectedCountryCode,
@@ -207,7 +212,9 @@ fun MainMobiStreamApp(
                                                 },
                                                 onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
                                                 onTogglePin = { id -> viewModel.togglePinned(id) },
-                                                onSelectCategory = { cat -> viewModel.setCategoryFilter(cat) },
+                                                onSelectCategory = { cat ->
+                                                    viewModel.selectExploreCategory(cat)
+                                                },
                                                 onApplyFilters = { filters ->
                                                     viewModel.setCategoryFilter(filters.selectedCategory)
                                                     viewModel.setCountryFilter(filters.selectedCountry)
@@ -234,6 +241,9 @@ fun MainMobiStreamApp(
                                                 detectedCountryCode = uiState.detectedCountryCode,
                                                 filterOptions = uiState.filterOptions,
                                                 isDarkMode = uiState.isDarkMode,
+                                                selectedGroup = selectedExploreGroup,
+                                                onSelectGroup = { group -> viewModel.selectExploreGroup(group) },
+                                                sortCategoryChannels = viewModel::sortCategoryChannels,
                                                 onSelectChannel = { ch ->
                                                     playingChannel = ch
                                                     screenState = ScreenState.PLAYER

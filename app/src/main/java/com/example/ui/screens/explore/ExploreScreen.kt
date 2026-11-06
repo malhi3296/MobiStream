@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
@@ -63,29 +64,23 @@ import com.example.data.model.Channel
 import com.example.data.model.Country
 import com.example.data.model.Language
 import com.example.domain.FilterOptions
+import com.example.domain.GroupType
+import com.example.domain.SelectedGroup
 import com.example.ui.components.ChannelCard
 import com.example.ui.components.CountryChannelCard
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.getCountryFlag
 import com.example.ui.theme.GlowLilac
 import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.StreamGradientEnd
-import com.example.ui.theme.StreamGradientStart
 import com.example.ui.theme.StreamViolet
 import com.example.ui.theme.TextDarkPrimary
 import com.example.ui.theme.TextDarkSecondary
 
-enum class GroupType {
-    CATEGORY,
-    COUNTRY,
-    LANGUAGE
+enum class ExploreSubView {
+    NONE,
+    ALL_COUNTRIES,
+    ALL_LANGUAGES
 }
-
-data class SelectedGroup(
-    val type: GroupType,
-    val title: String,
-    val identifier: String
-)
 
 @Composable
 fun ExploreScreen(
@@ -98,25 +93,29 @@ fun ExploreScreen(
     detectedCountryCode: String,
     filterOptions: FilterOptions,
     isDarkMode: Boolean,
+    selectedGroup: SelectedGroup?,
+    onSelectGroup: (SelectedGroup?) -> Unit,
+    sortCategoryChannels: (String, List<Channel>) -> List<Channel>,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background != Color.White
-    var selectedGroup by remember { mutableStateOf<SelectedGroup?>(null) }
+    var subView by remember { mutableStateOf(ExploreSubView.NONE) }
+    var subViewSearch by remember { mutableStateOf("") }
 
     // High-contrast text colors
     val primaryTextColor = if (isDark) Color.White else TextDarkPrimary
     val secondaryTextColor = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
 
-    // If a category, country, or language is clicked, open dedicated channel list page
+    // 1. If a category, country, or language is selected, show its live channel list
     if (selectedGroup != null) {
-        val group = selectedGroup!!
-        BackHandler { selectedGroup = null }
+        val group = selectedGroup
+        BackHandler { onSelectGroup(null) }
 
         val matchingChannels = remember(group, allChannels, filterOptions) {
-            allChannels.filter { channel ->
+            val raw = allChannels.filter { channel ->
                 val matchesGroup = when (group.type) {
                     GroupType.CATEGORY -> channel.category.equals(group.identifier, ignoreCase = true)
                     GroupType.COUNTRY -> channel.countryCode.equals(group.identifier, ignoreCase = true) ||
@@ -128,6 +127,13 @@ fun ExploreScreen(
                 } else true
 
                 matchesGroup && matchesFilter
+            }
+
+            // Requirement 14: Prioritize popular global channels at the top (ESPN, CNN, etc.)
+            if (group.type == GroupType.CATEGORY) {
+                sortCategoryChannels(group.identifier, raw)
+            } else {
+                raw
             }
         }
 
@@ -145,7 +151,7 @@ fun ExploreScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { selectedGroup = null },
+                    onClick = { onSelectGroup(null) },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
@@ -239,6 +245,214 @@ fun ExploreScreen(
                 }
             }
         }
+    } else if (subView == ExploreSubView.ALL_COUNTRIES) {
+        // Requirement 13: "See all" for Countries in alphabetical order
+        BackHandler { subView = ExploreSubView.NONE }
+
+        val filteredCountries = remember(countries, subViewSearch) {
+            if (subViewSearch.isBlank()) countries
+            else countries.filter {
+                it.name.contains(subViewSearch, ignoreCase = true) ||
+                        it.code.contains(subViewSearch, ignoreCase = true)
+            }
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { subView = ExploreSubView.NONE },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = primaryTextColor
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "All Countries (A-Z)",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = primaryTextColor
+                    )
+                    Text(
+                        text = "${countries.size} countries available",
+                        fontFamily = InterFontFamily,
+                        fontSize = 12.sp,
+                        color = secondaryTextColor
+                    )
+                }
+            }
+
+            // Search filter for countries
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                OutlinedTextField(
+                    value = subViewSearch,
+                    onValueChange = { subViewSearch = it },
+                    placeholder = { Text("Search countries...", color = secondaryTextColor) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = StreamViolet) },
+                    trailingIcon = {
+                        if (subViewSearch.isNotEmpty()) {
+                            IconButton(onClick = { subViewSearch = "" }) {
+                                Icon(Icons.Default.Close, null, tint = secondaryTextColor)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
+                        unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
+                        focusedBorderColor = StreamViolet,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = primaryTextColor,
+                        unfocusedTextColor = primaryTextColor
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                )
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(filteredCountries) { country ->
+                    BigCountryCard(
+                        country = country,
+                        isDark = isDark,
+                        onClick = {
+                            subView = ExploreSubView.NONE
+                            onSelectGroup(
+                                SelectedGroup(
+                                    type = GroupType.COUNTRY,
+                                    title = "${country.flag} ${country.name}",
+                                    identifier = country.code
+                                )
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    } else if (subView == ExploreSubView.ALL_LANGUAGES) {
+        // Requirement 12: "See all" for Languages (Indian languages on top, punjabi first)
+        BackHandler { subView = ExploreSubView.NONE }
+
+        val filteredLanguages = remember(languages, subViewSearch) {
+            if (subViewSearch.isBlank()) languages
+            else languages.filter {
+                it.name.contains(subViewSearch, ignoreCase = true) ||
+                        it.code.contains(subViewSearch, ignoreCase = true)
+            }
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { subView = ExploreSubView.NONE },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = primaryTextColor
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "All Languages",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = primaryTextColor
+                    )
+                    Text(
+                        text = "${languages.size} languages available (Punjabi & Indian priority)",
+                        fontFamily = InterFontFamily,
+                        fontSize = 12.sp,
+                        color = secondaryTextColor
+                    )
+                }
+            }
+
+            // Search filter for languages
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                OutlinedTextField(
+                    value = subViewSearch,
+                    onValueChange = { subViewSearch = it },
+                    placeholder = { Text("Search languages...", color = secondaryTextColor) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = StreamViolet) },
+                    trailingIcon = {
+                        if (subViewSearch.isNotEmpty()) {
+                            IconButton(onClick = { subViewSearch = "" }) {
+                                Icon(Icons.Default.Close, null, tint = secondaryTextColor)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
+                        unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
+                        focusedBorderColor = StreamViolet,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = primaryTextColor,
+                        unfocusedTextColor = primaryTextColor
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                )
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(filteredLanguages) { language ->
+                    BigLanguageCard(
+                        language = language,
+                        isDark = isDark,
+                        onClick = {
+                            subView = ExploreSubView.NONE
+                            onSelectGroup(
+                                SelectedGroup(
+                                    type = GroupType.LANGUAGE,
+                                    title = "${language.name} Channels",
+                                    identifier = language.name
+                                )
+                            )
+                        }
+                    )
+                }
+            }
+        }
     } else {
         // Explore Root Page
         Box(
@@ -257,10 +471,12 @@ fun ExploreScreen(
                     SectionHeader(
                         title = "Popular in $countryFlag $detectedCountryName",
                         onSeeAllClick = {
-                            selectedGroup = SelectedGroup(
-                                type = GroupType.COUNTRY,
-                                title = "$countryFlag $detectedCountryName",
-                                identifier = detectedCountryCode
+                            onSelectGroup(
+                                SelectedGroup(
+                                    type = GroupType.COUNTRY,
+                                    title = "$countryFlag $detectedCountryName",
+                                    identifier = detectedCountryCode
+                                )
                             )
                         }
                     )
@@ -341,7 +557,7 @@ fun ExploreScreen(
                     }
                 }
 
-                // If user typed in search query, show search results
+                // If user typed in search query, show direct search results
                 if (filterOptions.searchQuery.isNotBlank()) {
                     val searchResults = allChannels.filter {
                         it.name.contains(filterOptions.searchQuery, ignoreCase = true) ||
@@ -383,8 +599,7 @@ fun ExploreScreen(
                         }
                     }
                 } else {
-                    // NO direct channel list!
-                    // Put Big Divs for Categories, Countries, and Languages
+                    // Big Divs for Categories, Countries, and Languages
 
                     // SECTION 1: Categories (Big Divs)
                     item {
@@ -410,10 +625,12 @@ fun ExploreScreen(
                                     category = category,
                                     isDark = isDark,
                                     onClick = {
-                                        selectedGroup = SelectedGroup(
-                                            type = GroupType.CATEGORY,
-                                            title = category.name,
-                                            identifier = category.name
+                                        onSelectGroup(
+                                            SelectedGroup(
+                                                type = GroupType.CATEGORY,
+                                                title = category.name,
+                                                identifier = category.name
+                                            )
                                         )
                                     }
                                 )
@@ -421,18 +638,34 @@ fun ExploreScreen(
                         }
                     }
 
-                    // SECTION 2: Countries (Big Divs)
+                    // SECTION 2: Countries (Big Divs with "See All" at the end - Requirement 13)
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Countries",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = primaryTextColor,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Countries",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = primaryTextColor
+                            )
+                            Text(
+                                text = "See all (${countries.size})",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = StreamViolet,
+                                modifier = Modifier.clickable { subView = ExploreSubView.ALL_COUNTRIES }
+                            )
+                        }
 
+                        val visibleCountries = countries.take(12)
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 20.dp),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -440,34 +673,63 @@ fun ExploreScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 6.dp)
                         ) {
-                            items(countries) { country ->
+                            items(visibleCountries) { country ->
                                 BigCountryCard(
                                     country = country,
                                     isDark = isDark,
                                     onClick = {
-                                        selectedGroup = SelectedGroup(
-                                            type = GroupType.COUNTRY,
-                                            title = "${country.flag} ${country.name}",
-                                            identifier = country.code
+                                        onSelectGroup(
+                                            SelectedGroup(
+                                                type = GroupType.COUNTRY,
+                                                title = "${country.flag} ${country.name}",
+                                                identifier = country.code
+                                            )
                                         )
                                     }
+                                )
+                            }
+
+                            // "See all" card at the end
+                            item {
+                                SeeAllCard(
+                                    title = "All Countries",
+                                    subtitle = "${countries.size} countries (A-Z)",
+                                    icon = Icons.Default.Public,
+                                    isDark = isDark,
+                                    onClick = { subView = ExploreSubView.ALL_COUNTRIES }
                                 )
                             }
                         }
                     }
 
-                    // SECTION 3: Languages (Big Divs)
+                    // SECTION 3: Languages (Big Divs with Indian & Punjabi on top and "See All" at the end - Requirement 12)
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Languages",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = primaryTextColor,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Languages",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = primaryTextColor
+                            )
+                            Text(
+                                text = "See all (${languages.size})",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = StreamViolet,
+                                modifier = Modifier.clickable { subView = ExploreSubView.ALL_LANGUAGES }
+                            )
+                        }
 
+                        val visibleLanguages = languages.take(12)
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 20.dp),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -475,17 +737,30 @@ fun ExploreScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 6.dp)
                         ) {
-                            items(languages) { language ->
+                            items(visibleLanguages) { language ->
                                 BigLanguageCard(
                                     language = language,
                                     isDark = isDark,
                                     onClick = {
-                                        selectedGroup = SelectedGroup(
-                                            type = GroupType.LANGUAGE,
-                                            title = "${language.name} Channels",
-                                            identifier = language.name
+                                        onSelectGroup(
+                                            SelectedGroup(
+                                                type = GroupType.LANGUAGE,
+                                                title = "${language.name} Channels",
+                                                identifier = language.name
+                                            )
                                         )
                                     }
+                                )
+                            }
+
+                            // "See all" card at the end
+                            item {
+                                SeeAllCard(
+                                    title = "All Languages",
+                                    subtitle = "${languages.size} languages",
+                                    icon = Icons.Default.Language,
+                                    isDark = isDark,
+                                    onClick = { subView = ExploreSubView.ALL_LANGUAGES }
                                 )
                             }
                         }
@@ -493,6 +768,118 @@ fun ExploreScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * See All Card for Countries and Languages rows
+ */
+@Composable
+fun SeeAllCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cardShape = RoundedCornerShape(20.dp)
+
+    Column(
+        modifier = modifier
+            .width(155.dp)
+            .clickable { onClick() }
+            .testTag("see_all_card_${title.lowercase().replace(" ", "_")}"),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(155.dp)
+                .clip(cardShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            if (isDark) Color(0xFF381F6F) else Color(0xFFE9E5FC),
+                            if (isDark) Color(0xFF1E1045) else Color(0xFFF5F3FF)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = StreamViolet.copy(alpha = 0.5f),
+                    shape = cardShape
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(StreamViolet),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "View All",
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (isDark) Color.White else TextDarkPrimary
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(StreamViolet),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Open",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = title,
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = if (isDark) Color.White else TextDarkPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = subtitle,
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 12.sp,
+            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
