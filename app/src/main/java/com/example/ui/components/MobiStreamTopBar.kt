@@ -77,11 +77,9 @@ fun MobiStreamTopBar(
                 modifier = Modifier.testTag("brand_header")
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                    painter = painterResource(id = R.drawable.ic_mobistream_symbol),
                     contentDescription = "MobiStream Logo",
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                    modifier = Modifier.size(32.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {

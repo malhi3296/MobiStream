@@ -149,12 +149,9 @@ fun UserInfoModal(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                        painter = painterResource(id = R.drawable.ic_mobistream_symbol),
                         contentDescription = developerName,
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, StreamViolet, CircleShape)
+                        modifier = Modifier.size(52.dp)
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -344,7 +341,7 @@ fun UserInfoModal(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Version 1.0.2 (Build 102) • Streaming made mobile.",
+                        text = "Version 1.0.3 (Build 103) • Streaming made mobile.",
                         fontFamily = InterFontFamily,
                         fontSize = 12.sp,
                         color = if (isDark) GlowLilac else StreamViolet

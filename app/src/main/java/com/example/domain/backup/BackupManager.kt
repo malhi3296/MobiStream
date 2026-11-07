@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 data class MobiStreamBackup(
-    val version: String = "1.0.2",
+    val version: String = "1.0.3",
     val timestamp: Long = System.currentTimeMillis(),
     val favoriteChannelIds: List<String> = emptyList(),
     val pinnedChannelIds: List<String> = emptyList(),
@@ -22,7 +22,7 @@ object BackupManager {
     ): String {
         val root = JSONObject()
         root.put("app", "MobiStream")
-        root.put("version", "1.0.2")
+        root.put("version", "1.0.3")
         root.put("timestamp", System.currentTimeMillis())
 
         val favArray = JSONArray()

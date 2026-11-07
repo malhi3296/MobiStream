@@ -94,15 +94,14 @@ fun SplashScreen(
                 )
         )
 
-        // Only App Logo with smooth scale and entrance
+        // Only App Logo with smooth scale and entrance (clean symbol, no white box)
         Image(
-            painter = painterResource(id = R.drawable.ic_mobistream_logo),
+            painter = painterResource(id = R.drawable.ic_mobistream_symbol),
             contentDescription = "MobiStream Logo",
             modifier = Modifier
                 .size(130.dp)
                 .scale(scale.value)
                 .alpha(alpha.value)
-                .clip(RoundedCornerShape(28.dp))
                 .testTag("splash_logo")
         )
     }

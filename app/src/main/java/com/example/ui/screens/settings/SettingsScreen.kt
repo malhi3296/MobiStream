@@ -589,11 +589,9 @@ fun SettingsScreen(
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                            painter = painterResource(id = R.drawable.ic_mobistream_symbol),
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                            modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
@@ -612,7 +610,7 @@ fun SettingsScreen(
                                 color = if (isDark) GlowLilac else StreamViolet
                             )
                             Text(
-                                text = "Version 1.0.2 (Build 102)",
+                                text = "Version 1.0.3 (Build 103)",
                                 fontFamily = InterFontFamily,
                                 fontSize = 11.sp,
                                 color = subtitleTextColor

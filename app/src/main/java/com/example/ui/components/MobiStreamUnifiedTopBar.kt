@@ -72,11 +72,9 @@ fun MobiStreamUnifiedTopBar(
             modifier = Modifier.testTag("unified_topbar_brand")
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                painter = painterResource(id = R.drawable.ic_mobistream_symbol),
                 contentDescription = "MobiStream Logo",
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(9.dp))
+                modifier = Modifier.size(30.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(

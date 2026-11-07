@@ -54,7 +54,8 @@ MobiStream is a modern, high-performance Android IPTV streaming application buil
 ## 📦 APK Download
 
 Pre-built APKs are available in the repository:
-- `apk/mobistream-v1.0.2.apk` (Latest: v1.0.2, Build 102)
+- `apk/mobistream-v1.0.3.apk` (Latest: v1.0.3, Build 103)
+- `apk/mobistream-v1.0.2.apk`
 - `apk/mobistream-v1.0.1.apk`
 - `apk/mobistream-v1.0.0.apk`
 
