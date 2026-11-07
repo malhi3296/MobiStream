@@ -523,29 +523,43 @@ fun CountryChannelCard(
             .clickable { onPlayClick() }
             .testTag("country_channel_card_${channel.id}")
     ) {
-        // Logo in Center Upper
+        // Logo in Center Upper with adaptive contrast surface
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(110.dp)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (channel.logoUrl.isNotBlank()) {
-                AsyncImage(
-                    model = channel.logoUrl,
-                    contentDescription = channel.name,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Text(
-                    text = channel.name.take(2).uppercase(),
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = StreamViolet
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isDark) Color(0xFF221A44) else Color(0xFFFFFFFF))
+                    .border(
+                        width = 1.dp,
+                        color = if (isDark) Color(0xFF352B66) else Color(0xFFE2E4EE),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (channel.logoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = channel.logoUrl,
+                        contentDescription = channel.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = channel.name.take(2).uppercase(),
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        color = StreamViolet
+                    )
+                }
             }
         }
 

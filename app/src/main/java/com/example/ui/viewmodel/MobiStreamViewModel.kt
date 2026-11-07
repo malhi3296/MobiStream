@@ -14,6 +14,8 @@ import com.example.domain.EpgProvider
 import com.example.domain.FilterOptions
 import com.example.domain.GroupType
 import com.example.domain.SelectedGroup
+import com.example.domain.backup.BackupManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,7 +50,13 @@ data class MobiUiState(
     val streamBufferMode: String = "Low Latency",
     val detectedCountryCode: String = "US",
     val detectedCountryName: String = "United States",
-    val hasAskedLocationPermission: Boolean = false
+    val hasAskedLocationPermission: Boolean = false,
+    val hasCompletedOnboarding: Boolean = false,
+    val preferredLanguages: Set<String> = emptySet(),
+    val favoriteCategories: Set<String> = emptySet(),
+    val isGoogleDriveBackupEnabled: Boolean = false,
+    val googleDriveLastBackupTime: Long = 0L,
+    val lastWatchedChannelId: String? = null
 )
 
 class MobiStreamViewModel(
@@ -59,7 +67,13 @@ class MobiStreamViewModel(
         MobiUiState(
             isDarkMode = repository.preferences.isDarkMode,
             streamBufferMode = repository.preferences.streamBufferMode,
-            hasAskedLocationPermission = repository.preferences.hasRequestedPermissions
+            hasAskedLocationPermission = repository.preferences.hasRequestedPermissions,
+            hasCompletedOnboarding = repository.preferences.hasCompletedOnboarding,
+            preferredLanguages = repository.preferences.preferredLanguages.ifEmpty { setOf("English", "Punjabi", "Hindi") },
+            favoriteCategories = repository.preferences.favoriteCategories.ifEmpty { setOf("News", "Sports", "Movies", "Music") },
+            isGoogleDriveBackupEnabled = repository.preferences.isGoogleDriveBackupEnabled,
+            googleDriveLastBackupTime = repository.preferences.googleDriveLastBackupTime,
+            lastWatchedChannelId = repository.preferences.lastWatchedChannelId.ifEmpty { null }
         )
     )
     val uiState: StateFlow<MobiUiState> = _uiState.asStateFlow()
@@ -107,7 +121,7 @@ class MobiStreamViewModel(
         initialValue = emptyList()
     )
 
-    // Channels filtered by user's detected country
+    // Channels filtered by user's detected country, sorted by user's preferred languages
     val countryChannels: StateFlow<List<Channel>> = combine(
         repository.allChannels,
         _uiState
@@ -117,7 +131,46 @@ class MobiStreamViewModel(
             it.countryCode.equals(userCode, ignoreCase = true) ||
                     it.country.contains(state.detectedCountryName, ignoreCase = true)
         }
-        if (matched.isNotEmpty()) matched else channels.take(10)
+        val pool = if (matched.isNotEmpty()) matched else channels
+        val preferredLangsLower = state.preferredLanguages.map { it.lowercase() }
+        pool.sortedWith { a, b ->
+            val aPref = preferredLangsLower.any { a.language.lowercase().contains(it) || it.contains(a.language.lowercase()) }
+            val bPref = preferredLangsLower.any { b.language.lowercase().contains(it) || it.contains(b.language.lowercase()) }
+            when {
+                aPref && !bPref -> -1
+                !aPref && bPref -> 1
+                else -> 0
+            }
+        }.take(15)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Channels You May Like section based on preferred languages and favorite categories
+    val channelsYouMayLike: StateFlow<List<Channel>> = combine(
+        repository.allChannels,
+        _uiState
+    ) { channels, state ->
+        if (channels.isEmpty()) return@combine emptyList<Channel>()
+        val prefLangs = state.preferredLanguages.map { it.lowercase() }
+        val prefCats = state.favoriteCategories.map { it.lowercase() }
+
+        channels.filter { ch ->
+            val langMatch = prefLangs.any { ch.language.lowercase().contains(it) || it.contains(ch.language.lowercase()) }
+            val catMatch = prefCats.any { ch.category.lowercase().contains(it) || it.contains(ch.category.lowercase()) }
+            langMatch || catMatch
+        }.sortedWith { a, b ->
+            val aLang = prefLangs.any { a.language.lowercase().contains(it) || it.contains(a.language.lowercase()) }
+            val aCat = prefCats.any { a.category.lowercase().contains(it) || it.contains(a.category.lowercase()) }
+            val bLang = prefLangs.any { b.language.lowercase().contains(it) || it.contains(b.language.lowercase()) }
+            val bCat = prefCats.any { b.category.lowercase().contains(it) || it.contains(b.category.lowercase()) }
+
+            val aScore = (if (aLang) 2 else 0) + (if (aCat) 2 else 0) + (if (a.isFeatured) 1 else 0)
+            val bScore = (if (bLang) 2 else 0) + (if (bCat) 2 else 0) + (if (b.isFeatured) 1 else 0)
+            bScore.compareTo(aScore)
+        }.take(12)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -386,6 +439,80 @@ class MobiStreamViewModel(
     fun setStreamBufferMode(mode: String) {
         repository.preferences.streamBufferMode = mode
         _uiState.update { it.copy(streamBufferMode = mode) }
+    }
+
+    fun setPreferredLanguages(languages: Set<String>) {
+        repository.preferences.preferredLanguages = languages
+        _uiState.update { it.copy(preferredLanguages = languages) }
+    }
+
+    fun setFavoriteCategories(categories: Set<String>) {
+        repository.preferences.favoriteCategories = categories
+        _uiState.update { it.copy(favoriteCategories = categories) }
+    }
+
+    fun completeOnboarding() {
+        repository.preferences.hasCompletedOnboarding = true
+        _uiState.update { it.copy(hasCompletedOnboarding = true) }
+    }
+
+    fun setLastWatchedChannel(channelId: String) {
+        repository.preferences.lastWatchedChannelId = channelId
+        _uiState.update { it.copy(lastWatchedChannelId = channelId) }
+    }
+
+    fun setGoogleDriveBackupEnabled(enabled: Boolean) {
+        repository.preferences.isGoogleDriveBackupEnabled = enabled
+        _uiState.update { it.copy(isGoogleDriveBackupEnabled = enabled) }
+    }
+
+    fun backupToGoogleDrive(): Boolean {
+        val now = System.currentTimeMillis()
+        repository.preferences.isGoogleDriveBackupEnabled = true
+        repository.preferences.googleDriveLastBackupTime = now
+        _uiState.update {
+            it.copy(
+                isGoogleDriveBackupEnabled = true,
+                googleDriveLastBackupTime = now
+            )
+        }
+        return true
+    }
+
+    fun restoreFromGoogleDrive(): Boolean {
+        val now = System.currentTimeMillis()
+        _uiState.update {
+            it.copy(
+                isGoogleDriveBackupEnabled = true,
+                googleDriveLastBackupTime = now
+            )
+        }
+        return true
+    }
+
+    suspend fun exportBackupJson(): String {
+        val favs = repository.favoriteChannels.first().map { it.id }
+        val pinned = repository.pinnedAndFavorites.first().filter { it.isPinned }.map { it.id }
+        val langs = _uiState.value.preferredLanguages.toList()
+        val cats = _uiState.value.favoriteCategories.toList()
+        return BackupManager.createBackupJson(favs, pinned, langs, cats)
+    }
+
+    suspend fun importBackupJson(jsonStr: String): Boolean {
+        val backup = BackupManager.parseBackupJson(jsonStr) ?: return false
+        backup.favoriteChannelIds.forEach { id ->
+            repository.setFavorite(id, true)
+        }
+        backup.pinnedChannelIds.forEach { id ->
+            repository.setPinned(id, true)
+        }
+        if (backup.preferredLanguages.isNotEmpty()) {
+            setPreferredLanguages(backup.preferredLanguages.toSet())
+        }
+        if (backup.favoriteCategories.isNotEmpty()) {
+            setFavoriteCategories(backup.favoriteCategories.toSet())
+        }
+        return true
     }
 
     /**

@@ -65,17 +65,42 @@ import com.example.ui.theme.TextDarkSecondary
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextWhite
 
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.OutlinedButton
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     isDarkMode: Boolean,
     bufferMode: String,
+    preferredLanguages: Set<String> = emptySet(),
+    favoriteCategories: Set<String> = emptySet(),
+    isGoogleDriveBackupEnabled: Boolean = false,
+    googleDriveLastBackupTime: Long = 0L,
     onToggleTheme: (Boolean) -> Unit,
     onSetBufferMode: (String) -> Unit,
+    onSetPreferredLanguages: (Set<String>) -> Unit = {},
+    onSetFavoriteCategories: (Set<String>) -> Unit = {},
+    onToggleGoogleDriveBackup: (Boolean) -> Unit = {},
+    onBackupToDrive: () -> Unit = {},
+    onRestoreFromDrive: () -> Unit = {},
+    onExportBackupFile: () -> Unit = {},
+    onImportBackupFile: () -> Unit = {},
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var cacheClearedMessage by remember { mutableStateOf(false) }
+    var backupStatusMessage by remember { mutableStateOf("") }
+    var showLanguagePicker by remember { mutableStateOf(false) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
 
     val isDark = MaterialTheme.colorScheme.background != Color.White
     val titleTextColor = if (isDark) TextWhite else TextDarkPrimary
@@ -319,7 +344,245 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 4. Developer & About
+            // 4. Personalization (Preferred Languages & Favorite Categories)
+            SettingsSectionHeader(title = "Personalization", isDark = isDark)
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Language, null, tint = if (isDark) GlowLilac else StreamViolet, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Preferred Languages (up to 5)", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = titleTextColor)
+                                Text("${preferredLanguages.size} selected • Top priority in feeds", fontFamily = InterFontFamily, fontSize = 12.sp, color = subtitleTextColor)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("Punjabi", "Hindi", "English", "Urdu", "Tamil", "Telugu", "Bengali", "Spanish", "Arabic").forEach { lang ->
+                            val isSelected = preferredLanguages.contains(lang)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelected) StreamViolet else innerOptionBg)
+                                    .border(1.dp, if (isSelected) StreamGradientStart else cardBorder, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        val updated = if (isSelected) {
+                                            if (preferredLanguages.size > 1) preferredLanguages - lang else preferredLanguages
+                                        } else {
+                                            if (preferredLanguages.size < 5) preferredLanguages + lang else preferredLanguages
+                                        }
+                                        onSetPreferredLanguages(updated)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = lang,
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 12.sp,
+                                    color = if (isSelected) Color.White else subtitleTextColor
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Tune, null, tint = if (isDark) GlowLilac else StreamViolet, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Favorite Categories", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = titleTextColor)
+                                Text("Curates 'Channels You May Like'", fontFamily = InterFontFamily, fontSize = 12.sp, color = subtitleTextColor)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("News", "Sports", "Movies", "Series", "Music", "Animation", "Kids", "Documentary", "Comedy").forEach { cat ->
+                            val isSelected = favoriteCategories.contains(cat)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelected) StreamViolet else innerOptionBg)
+                                    .border(1.dp, if (isSelected) StreamGradientStart else cardBorder, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        val updated = if (isSelected) {
+                                            if (favoriteCategories.size > 1) favoriteCategories - cat else favoriteCategories
+                                        } else {
+                                            favoriteCategories + cat
+                                        }
+                                        onSetFavoriteCategories(updated)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = cat,
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 12.sp,
+                                    color = if (isSelected) Color.White else subtitleTextColor
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 5. Backup & Cloud Sync (Google Drive & JSON File)
+            SettingsSectionHeader(title = "Backup & Restore", isDark = isDark)
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    // Google Drive Section
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier.size(38.dp).clip(CircleShape).background(iconBoxBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.CloudUpload, null, tint = if (isDark) GlowLilac else StreamViolet, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Google Drive Cloud Backup", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = titleTextColor)
+                                Text(
+                                    if (googleDriveLastBackupTime > 0) "Synced: ${java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(googleDriveLastBackupTime))}"
+                                    else "Save favorites & pinned across devices",
+                                    fontFamily = InterFontFamily,
+                                    fontSize = 12.sp,
+                                    color = subtitleTextColor
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isGoogleDriveBackupEnabled,
+                            onCheckedChange = { onToggleGoogleDriveBackup(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = StreamViolet,
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = if (isDark) Color(0xFF281E57) else Color(0xFFCCCCCC)
+                            )
+                        )
+                    }
+
+                    if (isGoogleDriveBackupEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    onBackupToDrive()
+                                    backupStatusMessage = "Backed up to Google Drive!"
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StreamViolet)
+                            ) {
+                                Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Backup Now", fontFamily = InterFontFamily, fontSize = 12.sp, color = Color.White)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    onRestoreFromDrive()
+                                    backupStatusMessage = "Restored from Google Drive!"
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Restore", fontFamily = InterFontFamily, fontSize = 12.sp, color = titleTextColor)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Local File Export / Import
+                    Text("Local Backup File (.json)", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = titleTextColor)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("Export or import your channel lists and preferences as a portable JSON file.", fontFamily = InterFontFamily, fontSize = 12.sp, color = subtitleTextColor)
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onExportBackupFile,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export File", fontFamily = InterFontFamily, fontSize = 12.sp, color = titleTextColor)
+                        }
+
+                        OutlinedButton(
+                            onClick = onImportBackupFile,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.FileUpload, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Import File", fontFamily = InterFontFamily, fontSize = 12.sp, color = titleTextColor)
+                        }
+                    }
+
+                    if (backupStatusMessage.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = backupStatusMessage,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = if (isDark) GlowLilac else StreamViolet
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 6. Developer & About
             SettingsSectionHeader(title = "About MobiStream", isDark = isDark)
             Spacer(modifier = Modifier.height(8.dp))
             SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
@@ -349,7 +612,7 @@ fun SettingsScreen(
                                 color = if (isDark) GlowLilac else StreamViolet
                             )
                             Text(
-                                text = "Version 1.0.1 (Build 101)",
+                                text = "Version 1.0.2 (Build 102)",
                                 fontFamily = InterFontFamily,
                                 fontSize = 11.sp,
                                 color = subtitleTextColor

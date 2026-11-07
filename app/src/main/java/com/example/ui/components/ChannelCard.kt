@@ -101,29 +101,42 @@ fun ChannelCard(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (channel.logoUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = channel.logoUrl,
-                        contentDescription = "${channel.name} logo",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(StreamGradientStart, StreamGradientEnd))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tv,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
+                // Adaptive contrast tile ensuring 100% logo visibility in both light and dark modes
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isDark) Color(0xFF221A44) else Color(0xFFFFFFFF))
+                        .border(
+                            width = 1.dp,
+                            color = if (isDark) Color(0xFF352B66) else Color(0xFFE2E4EE),
+                            shape = RoundedCornerShape(12.dp)
                         )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (channel.logoUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = channel.logoUrl,
+                            contentDescription = "${channel.name} logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(StreamGradientStart, StreamGradientEnd))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tv,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
                     }
                 }
             }

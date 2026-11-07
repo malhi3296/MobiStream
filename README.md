@@ -16,17 +16,24 @@ MobiStream is a modern, high-performance Android IPTV streaming application buil
 
 ## 📱 Features
 
-- **Media3 ExoPlayer Streaming**: Native HLS (`.m3u8`) low-latency live video player with custom touch controls, fullscreen toggle, aspect ratio controls (Fit/Zoom/Fill), and stream health monitoring.
-- **Dynamic Slideshow**:
-  - Live News program showcase with breaking news backdrop
-  - Major global live sports broadcasts with stadium action visuals
-  - Rotating trending programs and shows
-- **Device Location Awareness**: Automatically detects device country and localizes content to highlight channels popular in your country.
-- **Pinned & Favorites**: Pin your top-priority channels and save unlimited favorites with offline Room Database persistence.
-- **Deep Filter System**: Filter thousands of global channels by Country, Language, and Category/Genre.
-- **Global Instant Search**: Search channels, networks, and genres in real time.
-- **Theme Support**: Seamless switching between clean light mode and Midnight Dark mode (`#0E0A24`).
-- **Offline Persistence**: Room database caching channels, favorites, pinned states, and playback settings across app restarts.
+- **Media3 ExoPlayer Streaming**: Native HLS (`.m3u8`) low-latency live video player with on-screen swipe gestures (brightness on left, volume on right), auto landscape fullscreen, and stream health telemetry.
+- **Accurate EPG Programming**: 24-hour electronic program guide matching authentic channel schedules (History TV18, PTC News, PTC Punjabi, Aaj Tak, Sports, Movies, Music, Kids).
+- **Auto Focus Return Navigation**: Remembers and automatically scrolls the channel grid directly to the channel being watched upon exiting the player.
+- **Personalization & Onboarding**: First-install onboarding prompting for permissions, existing backup check, up to 5 preferred languages (Punjabi priority, Hindi, English, etc.), and favorite interest categories.
+- **Channels You May Like**: Curated personalized section displayed directly on Home based on chosen languages and categories.
+- **Backup & Cloud Sync**:
+  - **Google Drive Backup**: One-tap sync for favorites, pinned channels, and user preferences across devices.
+  - **Portable JSON File Backup**: Import and export channel lists and settings via Android Storage Access Framework (SAF).
+- **Adaptive Contrast Logos**: High-contrast adaptive tiles ensuring channel logos remain sharp and legible in both Midnight Dark and Cloud Light modes.
+- **Dynamic 5-Slide Hero Carousel**:
+  - Live News program with current broadcast backdrop (strictly first slide)
+  - Live sports broadcasts with stadium action visuals
+  - Rotating feature shows (refreshed every 30 minutes)
+- **Device Location Awareness**: Automatically detects device country and prioritizes channels from that country, sorted by user's preferred languages.
+- **Pinned & Favorites**: Pin priority channels to the top of Home and maintain an offline Room database favorites list.
+- **Deep Exploration System**: Explore 11,000+ channels by Category (distinct icons for all 25+ categories), Country (A-Z), and Language (native script characters: ੴ, अ, Aa, اردو, etc.).
+- **Global Instant Search & Multi-Filters**: Filter by category, country, language, quality (HD/FHD/SD), and live search keywords.
+- **Theme Support**: Seamless toggle between Cloud Light and Midnight Dark (`#0E0A24`).
 
 ---
 
@@ -39,14 +46,17 @@ MobiStream is a modern, high-performance Android IPTV streaming application buil
 - **Networking:** Retrofit2 + OkHttp3 + Moshi
 - **Image Loading:** Coil Compose
 - **Typography:** Google Font Inter (bundled locally)
-- **Permissions:** Runtime Location Permissions for country-aware channel discovery
+- **Permissions:** Runtime Location & Notification Permissions with graceful fallbacks
+- **Data Portability:** Android Storage Access Framework (SAF) JSON import/export
 
 ---
 
 ## 📦 APK Download
 
-Pre-built APK is available in the repository:
+Pre-built APKs are available in the repository:
+- `apk/mobistream-v1.0.2.apk` (Latest: v1.0.2, Build 102)
 - `apk/mobistream-v1.0.1.apk`
+- `apk/mobistream-v1.0.0.apk`
 
 ---
 

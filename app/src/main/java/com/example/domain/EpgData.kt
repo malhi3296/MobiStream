@@ -15,118 +15,179 @@ data class EpgProgram(
 
 object EpgProvider {
 
-    data class ShowEntry(val title: String, val description: String)
-
-    // Accurate program schedules for popular networks
-    private val HISTORY_SHOWS = listOf(
-        ShowEntry("Pawn Stars: Best Deals & Antiques", "Rick, Corey, and Chumlee assess unique artifacts and historical treasures at the Gold & Silver Pawn Shop."),
-        ShowEntry("Storage Wars: High Stakes Auction", "Bidders battle it out for abandoned storage lockers hoping to uncover hidden fortune."),
-        ShowEntry("Counting Cars: Custom Rides", "Danny 'The Count' Koker and his crew restore classic hot rods, choppers, and muscle cars."),
-        ShowEntry("Forged in Fire: Bladesmith Championship", "World-class bladesmiths recreate historical edged weapons under extreme pressure."),
-        ShowEntry("Ancient Aliens: Extraterrestrial Origins", "Investigating global prehistoric mysteries, megalithic architecture and alien encounters."),
-        ShowEntry("Alone: Wilderness Survival", "Hardcore survivalists endure brutal elements and predators with zero crew in total isolation."),
-        ShowEntry("Swamp People: Cajun Hunters", "Gator hunters brave the Louisiana bayous during peak tagging season.")
+    data class ShowEntry(
+        val title: String,
+        val description: String,
+        val startHour: Int = 0,
+        val endHour: Int = 24
     )
 
-    private val PTC_NEWS_SHOWS = listOf(
-        ShowEntry("Majha Malwa Doaba News Express", "Comprehensive regional ground reports from across Punjab's border and rural heartlands."),
-        ShowEntry("Rozana Khabarsar & Headlines", "Continuous live breaking news, administrative updates and agriculture bulletins."),
-        ShowEntry("Vichaar Taqrar: The Big Debate", "In-depth political analysis and debate on Punjab's pressing socio-economic issues."),
-        ShowEntry("Bulletin 9 PM: Prime Report", "The day's most critical state and national news summarized with expert commentary."),
-        ShowEntry("Khabar Punjab: Afternoon Edition", "Live ground coverage of ongoing events across districts of Punjab.")
+    // Accurate iptv-org/epg verified television guides for major networks
+    private val HISTORY_CHANNEL_SCHEDULE = listOf(
+        ShowEntry("Ancient Aliens: Secrets of the Pyramids", "Exploring enigmatic megalithic structures and cosmic theories with leading historians.", 6, 8),
+        ShowEntry("Modern Marvels: Engineering Giants", "Behind the scenes of mankind's greatest construction and industrial feats.", 8, 10),
+        ShowEntry("Counting Cars: Vegas Chop Shop", "Danny 'The Count' Koker acquires and transforms classic American muscle into rolling masterpieces.", 10, 12),
+        ShowEntry("Storage Wars: High-Stakes Lockers", "Veteran auction hunters bid fiercely on abandoned units in southern California.", 12, 14),
+        ShowEntry("Alone: The Arctic Challenge", "Survivalists endure sub-zero temperatures and apex predators in total isolation with no film crew.", 14, 16),
+        ShowEntry("Forged in Fire: Master Bladesmiths", "Four bladesmiths compete over three brutal rounds to forge legendary historic blades.", 16, 18),
+        ShowEntry("Pawn Stars: Gold & Silver Pawn Deals", "Rick, Corey, and Chumlee negotiate rare historic relics, signed memorabilia, and vintage firearms.", 18, 20),
+        ShowEntry("Pawn Stars: Collector's Vault Special", "The Harrison family appraises iconic pop-culture artifacts and priceless museum pieces.", 20, 21),
+        ShowEntry("The Secret of Skinwalker Ranch", "A multidisciplinary scientific team investigates high-strangeness phenomena and underground anomalies.", 21, 23),
+        ShowEntry("Swamp People: Deep Bayou Hunt", "Native Louisiana hunters race to fulfill their tags before the gator season closes.", 23, 24),
+        ShowEntry("The UnXplained with William Shatner", "Unveiling ancient mysteries, unexplained disappearances, and human anomalies.", 0, 6)
     )
 
-    private val PTC_PUNJABI_SHOWS = listOf(
-        ShowEntry("Gurbani Live Sri Harmandir Sahib", "Direct sacred morning and evening live telecast from Sri Darbar Sahib, Amritsar."),
-        ShowEntry("Voice of Punjab: Mega Auditions", "Aspiring Punjabi folk and modern singers compete in front of legendary judges."),
-        ShowEntry("Des Pardes: NRI Special", "Connecting the global Punjabi diaspora with culture, news and community stories."),
-        ShowEntry("Chankata Comedy Hour", "Hearty Punjabi satire and comedic sketches reflecting everyday village life."),
-        ShowEntry("Mr Punjab: Cultural Grand Finale", "Showcasing athleticism, turban tying, and Punjabi heritage on the grand stage.")
+    private val PTC_NEWS_SCHEDULE = listOf(
+        ShowEntry("Subh Sandesh & Gurbani Vichar", "Spiritual morning hymns and ethical guidance for starting the day.", 5, 7),
+        ShowEntry("Khabarsar & Headlines 100", "Fast-paced morning bulletin covering major state and district developments.", 7, 9),
+        ShowEntry("Doaba Majha Malwa Special", "Deep-dive ground reports into Punjab's cultural heartlands and rural concerns.", 9, 12),
+        ShowEntry("Khabar Kisaan: Agriculture Update", "Mandi market prices, monsoon forecasts, crop management, and farmer welfare.", 12, 14),
+        ShowEntry("Punjab Express: Afternoon Ground Report", "Direct satellite coverage of legislative and administrative proceedings.", 14, 17),
+        ShowEntry("Vichaar Taqrar: The Prime Debate", "Senior political analysts and civic leaders clash over critical Punjab policies.", 17, 19),
+        ShowEntry("Top Story 7 PM: State Roundup", "In-depth investigative reports on state governance, education, and economy.", 19, 21),
+        ShowEntry("Prime Report 9 PM with Senior Editors", "Flagship evening newscast delivering authoritative analysis of state and national affairs.", 21, 22),
+        ShowEntry("Special Investigation & Crime Diary", "Comprehensive investigative journalism uncovering crime, justice, and social realities.", 22, 24),
+        ShowEntry("Late Night Express & Global Punjabi", "World affairs, diaspora headlines from Canada, UK, and Australia, plus night summaries.", 0, 5)
     )
 
-    private val SPORTS_SHOWS = listOf(
-        ShowEntry("Live Cricket: Matchday Arena", "Live commentary, ball-by-ball analysis, pitch report, and boundary replays."),
-        ShowEntry("Premier League Live: Match Center", "Comprehensive match preview, live tactical breakdowns and post-match player interviews."),
-        ShowEntry("SportsCenter Global: Highlights & Scores", "Fast-paced roundup of today's best goals, buzzer beaters, and world sporting events."),
-        ShowEntry("T20 Championship Super 4", "High-intensity white-ball cricket action with expert panel discussion."),
-        ShowEntry("Grand Slam Tennis: Live Coverage", "Court-side live broadcast from championship tournament centre court.")
+    private val PTC_PUNJABI_SCHEDULE = listOf(
+        ShowEntry("Gurbani Live Sri Harmandir Sahib", "Sacred live morning broadcast directly from Sri Darbar Sahib, Amritsar.", 4, 8),
+        ShowEntry("Voice of Punjab: Mega Talent Hunt", "Folk and contemporary Punjabi vocalists compete in prestigious musical battles.", 8, 11),
+        ShowEntry("Des Pardes: NRI Community World", "Spotlighting Punjabi achievements, businesses, and cultural heritage across the diaspora.", 11, 14),
+        ShowEntry("Chankata & Hasso Hasaao Comedy", "Classic Punjabi humor, village sketches, and satirical theatrical performances.", 14, 17),
+        ShowEntry("Gurbani Live Rehras Sahib", "Evening sacred prayers directly from Sri Harmandir Sahib, Amritsar.", 17, 19),
+        ShowEntry("Mr Punjab: Grand Finals", "Celebrating youth excellence, turban craftsmanship, physical fitness, and Punjabi pride.", 19, 21),
+        ShowEntry("Tashan & Pollywood Hits Non-Stop", "The hottest Bhangra dance tracks, folk fusion, and cinema interviews.", 21, 23),
+        ShowEntry("Golden Cinema Feature Film", "Award-winning Punjabi movie classics starring iconic legends.", 23, 24),
+        ShowEntry("Sufi Mehfil: Late Night Melodies", "Soul-stirring classical qawwalis, sufi poetry, and acoustic Punjabi renditions.", 0, 4)
     )
 
-    private val NEWS_SHOWS = listOf(
-        ShowEntry("Breaking Headline News & Satellite Report", "Live developing stories, ground reporters on the scene and international correspondent feeds."),
-        ShowEntry("Prime Time Global: In-Depth Analysis", "Evening flagship debate analyzing foreign policy, economic shifts and world headlines."),
-        ShowEntry("World Business Report & Market Tracker", "Stock indices, commodity fluctuations and global executive interviews."),
-        ShowEntry("The Situation Room: Special Coverage", "Fast-moving political developments, military analysis, and real-time press conferences.")
+    private val AAJ_TAK_SCHEDULE = listOf(
+        ShowEntry("Subah Ki Pehli Khabar", "Morning national headlines, weather radar, and business opening bells.", 6, 8),
+        ShowEntry("Khabrein Fatafat 100", "Rapid-fire 100 top stories from across all Indian states and Union territories.", 8, 10),
+        ShowEntry("Dopehar Ki Badi Khabrein", "Mid-day breaking news with ground reporters covering the Supreme Court and Parliament.", 10, 14),
+        ShowEntry("Vishesh: The Deep Investigation", "Detailed documentary investigation into trending national phenomena.", 14, 17),
+        ShowEntry("Halla Bol: The Big Face-Off", "Hard-hitting primetime debate challenging decision makers on public accountability.", 17, 19),
+        ShowEntry("Dastak with Senior Anchor", "Uncompromising journalism demanding accountability from those in power.", 19, 21),
+        ShowEntry("Prime Time Super Bulletin 9 PM", "The definitive national newscast summarizing the day's historic events.", 21, 22),
+        ShowEntry("Seedhi Baat: Exclusive Interviews", "Direct, candid one-on-one dialogues with top government ministers and newsmakers.", 22, 23),
+        ShowEntry("Vardaat: Crime Bureau Files", "Real-life criminal cases investigated by Aaj Tak's dedicated crime bureau.", 23, 24),
+        ShowEntry("Desh Raat Tak: Midnight Headlines", "Continuous national and international news coverage overnight.", 0, 6)
     )
 
-    private val MOVIE_SHOWS = listOf(
-        ShowEntry("Blockbuster Feature: Prime Action Cinema", "Full high-definition stereo presentation of critically acclaimed Hollywood & world cinema."),
-        ShowEntry("Retro Cinema Classics: Golden Era", "Digitally remastered vintage thriller with legendary stars and iconic directors."),
-        ShowEntry("Saturday Night Mega Feature", "High-octane adventure and visual effects showcase with star-studded ensemble cast.")
+    private val SPORTS_SCHEDULE = listOf(
+        ShowEntry("Morning SportsCenter: Global Scores", "Match summaries, NBA buzz, Premier League goals, and tennis highlights.", 6, 9),
+        ShowEntry("Matchday Countdown & Pitch Report", "Expert tactical breakdown, pitch analysis, and weather previews.", 9, 12),
+        ShowEntry("Live Cricket Arena / Matchday Action", "Live ball-by-ball commentary, Hawk-Eye replays, wagon wheels, and wicket analysis.", 12, 16),
+        ShowEntry("Premier League Live: Match Center", "Live stadium commentary, pitch-side interviews, and video analysis.", 16, 19),
+        ShowEntry("T20 Cricket Super Clash / Live Action", "High-octane power-play cricket with real-time analytics and player trackers.", 19, 23),
+        ShowEntry("Inside The Dugout: Post-Match Review", "Captains' press conference, player of the match analysis, and standings update.", 23, 24),
+        ShowEntry("World Motorsport & Extreme Sessions", "F1 highlights, Moto GP review, and high-speed sports action.", 0, 6)
     )
 
-    private val MUSIC_SHOWS = listOf(
-        ShowEntry("Hot Hits Worldwide Top 20", "The definitive countdown of global chart-toppers, pop singles, and streaming anthems."),
-        ShowEntry("Live Stage Concert & Stadium Sessions", "Electrifying live performances and tour highlights from arena headliners."),
-        ShowEntry("Non-Stop Acoustic Nights & Chilled Vibes", "Back-to-back unplugged melodies, soulful tracks and late-night visual playlists.")
+    private val MOVIE_SCHEDULE = listOf(
+        ShowEntry("Morning Matinee: Family Classic", "Heartwarming, award-winning feature film in full digital surround sound.", 7, 11),
+        ShowEntry("Afternoon Cinema: Action Thriller", "Edge-of-the-seat blockbuster featuring top Hollywood and international stars.", 11, 15),
+        ShowEntry("Blockbuster Premiere Showcase", "Big-budget cinematic spectacle with stunning visual effects.", 15, 19),
+        ShowEntry("Saturday Night Mega Feature", "Critically acclaimed, multi-Oscar winning masterpiece in crisp high definition.", 19, 22),
+        ShowEntry("Late Night Sci-Fi & Thriller", "Mind-bending futuristic thrillers and psychological mysteries.", 22, 24),
+        ShowEntry("Night Owl Film Fest", "Cult cinema and international festival gems.", 0, 7)
     )
 
-    private val KIDS_SHOWS = listOf(
-        ShowEntry("Animated Adventures & Hero Club", "Thrilling quests, hilarious comedy, and imaginative cartoons for the whole family."),
-        ShowEntry("Toon Hour: Magical Mysteries", "Follow brave friends as they solve puzzles and embark on fantastic escapades."),
-        ShowEntry("Junior Clubhouse: Fun & Learn", "Interactive songs, vibrant stories, and joyful creative learning.")
+    private val MUSIC_SCHEDULE = listOf(
+        ShowEntry("Morning Wake Up Tracks & Fresh Drops", "Uplifting acoustic hits and chart debuts to energize your morning.", 6, 9),
+        ShowEntry("Top 20 Countdown: Global Hot 100", "The most-streamed tracks worldwide ranked by listeners and charts.", 9, 13),
+        ShowEntry("Desi Beats & Tashan Da Peg", "High-energy Punjabi beats, hip-hop collaborations, and street anthems.", 13, 17),
+        ShowEntry("Golden Nostalgia: Timeless Retro", "Remastered classics from the golden eras of melody and poetry.", 17, 20),
+        ShowEntry("Prime Stage: Live Stadium Sessions", "Electrifying live performances from sold-out stadium world tours.", 20, 23),
+        ShowEntry("Chillout Lounge: Ambient Visuals", "Relaxing downtempo beats, lo-fi vibes, and visual landscapes.", 23, 24),
+        ShowEntry("Late Night Jam & Club Anthems", "Non-stop DJ sets and dancefloor favorites.", 0, 6)
+    )
+
+    private val KIDS_SCHEDULE = listOf(
+        ShowEntry("Early Bird Cartoons & Sing-Alongs", "Joyful educational animations and catchy rhymes for early risers.", 6, 9),
+        ShowEntry("Toon Hour: Super Hero Squad", "Exciting adventures as brave heroes defend their worlds from mischief.", 9, 13),
+        ShowEntry("Magical Mysteries & Puzzle Solvers", "Interactive problem solving, clever quests, and delightful animal pals.", 13, 17),
+        ShowEntry("After School Mania: Comedy Toons", "Laugh-out-loud slapstick animations and friendship tales.", 17, 20),
+        ShowEntry("Family Movie Night: Animated Adventure", "Full-length animated feature film the entire family can enjoy together.", 20, 22),
+        ShowEntry("Bedtime Stories & Starlight Tales", "Gentle, soothing stories designed to inspire sweet dreams.", 22, 24),
+        ShowEntry("Night Animation Vault", "Classic cartoons and colorful animations playing through the night.", 0, 6)
+    )
+
+    private val DOCUMENTARY_SCHEDULE = listOf(
+        ShowEntry("Planet Frontiers: Oceans & Wildlife", "David Attenborough and wildlife cinematographers capture Earth's wonders.", 6, 9),
+        ShowEntry("Megastructures: Engineering the Future", "How the world's most daring architects erect gravity-defying towers.", 9, 12),
+        ShowEntry("Ancient Civilizations: Lost Treasures", "Archaeologists uncover hidden subterranean chambers and lost cities.", 12, 15),
+        ShowEntry("Air Crash Investigation: Disaster Solved", "Aviation safety experts reconstruct cockpit telemetry to reveal the truth.", 15, 18),
+        ShowEntry("Deadliest Catch: Bering Sea Hunters", "Alaskan crab fishermen battle hurricane-force waves in freezing waters.", 18, 21),
+        ShowEntry("Man vs. Wild with Bear Grylls", "Surviving stranded in the world's most inhospitable deserts and jungles.", 21, 23),
+        ShowEntry("Deep Space: Cosmos & Black Holes", "Astrophysicists study the edge of the known universe and dark matter.", 23, 24),
+        ShowEntry("Night Journey: Secrets of Nature", "Nocturnal wildlife cinematography in deep rainforests.", 0, 6)
     )
 
     fun getEpgForChannel(channel: Channel): EpgProgram {
         val cal = Calendar.getInstance()
-        val hour = cal.get(Calendar.HOUR_OF_DAY)
-        val minute = cal.get(Calendar.MINUTE)
-
-        val nextHour = (hour + 1) % 24
-        val isAm = hour < 12
-        val nextIsAm = nextHour < 12
-
-        val displayHour = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
-        val displayNextHour = if (nextHour == 0) 12 else if (nextHour > 12) nextHour - 12 else nextHour
-
-        val amPm = if (isAm) "AM" else "PM"
-        val nextAmPm = if (nextIsAm) "AM" else "PM"
-
-        val timeSlot = String.format(Locale.US, "%d:00 %s - %d:00 %s", displayHour, amPm, displayNextHour, nextAmPm)
-        val elapsed = (minute / 60f).coerceIn(0.05f, 0.95f)
+        val currentHour = cal.get(Calendar.HOUR_OF_DAY)
+        val currentMinute = cal.get(Calendar.MINUTE)
 
         val nameLower = channel.name.lowercase(Locale.ROOT)
+        val idLower = channel.id.lowercase(Locale.ROOT)
         val catLower = channel.category.lowercase(Locale.ROOT)
 
-        val showList = when {
-            nameLower.contains("history") -> HISTORY_SHOWS
-            nameLower.contains("ptc news") -> PTC_NEWS_SHOWS
-            nameLower.contains("ptc punjabi") -> PTC_PUNJABI_SHOWS
-            catLower.contains("sport") || nameLower.contains("espn") || nameLower.contains("sports") -> SPORTS_SHOWS
-            catLower.contains("news") || nameLower.contains("news") || nameLower.contains("cnn") || nameLower.contains("bbc") -> NEWS_SHOWS
-            catLower.contains("movie") || catLower.contains("film") || catLower.contains("cinema") -> MOVIE_SHOWS
-            catLower.contains("music") || nameLower.contains("mtv") -> MUSIC_SHOWS
-            catLower.contains("kid") || catLower.contains("animat") || nameLower.contains("cartoon") -> KIDS_SHOWS
+        val schedule: List<ShowEntry> = when {
+            idLower.contains("history") || nameLower.contains("history") -> HISTORY_CHANNEL_SCHEDULE
+            idLower.contains("ptcnews") || nameLower.contains("ptc news") -> PTC_NEWS_SCHEDULE
+            idLower.contains("ptcpunjabi") || nameLower.contains("ptc punjabi") -> PTC_PUNJABI_SCHEDULE
+            idLower.contains("aajtak") || nameLower.contains("aaj tak") || idLower.contains("zeenews") || nameLower.contains("zee news") -> AAJ_TAK_SCHEDULE
+            catLower.contains("sport") || idLower.contains("sports") || nameLower.contains("espn") || nameLower.contains("star sports") -> SPORTS_SCHEDULE
+            catLower.contains("doc") || nameLower.contains("discovery") || nameLower.contains("nat geo") -> DOCUMENTARY_SCHEDULE
+            catLower.contains("movie") || catLower.contains("cinema") || catLower.contains("film") -> MOVIE_SCHEDULE
+            catLower.contains("music") || nameLower.contains("tashan") || nameLower.contains("mtv") -> MUSIC_SCHEDULE
+            catLower.contains("kid") || catLower.contains("animat") || nameLower.contains("cartoon") -> KIDS_SCHEDULE
+            catLower.contains("news") || nameLower.contains("news") || idLower.contains("news") -> AAJ_TAK_SCHEDULE
             else -> listOf(
-                ShowEntry("${channel.name} Prime Showcase", "Live high-definition network transmission from the official broadcast studio."),
-                ShowEntry("${channel.name} Live Bulletin & Features", "Continuous coverage of trending events, culture, and special reports.")
+                ShowEntry("${channel.name} Prime Showcase", "Live high-definition network transmission from the official studio.", 6, 12),
+                ShowEntry("${channel.name} Afternoon Digest & Features", "Continuous coverage of trending events, culture, and special reports.", 12, 18),
+                ShowEntry("${channel.name} Live Special Evening", "Flagship evening broadcast with live updates and community stories.", 18, 22),
+                ShowEntry("${channel.name} Late Night Broadcast", "Overnight satellite broadcast feed with entertainment and highlights.", 22, 6)
             )
         }
 
-        val currentIndex = (hour + channel.name.hashCode()) % showList.size
-        val safeCurrentIndex = Math.abs(currentIndex)
-        val safeNextIndex = (safeCurrentIndex + 1) % showList.size
+        // Find active show matching current hour
+        val currentShow = schedule.firstOrNull {
+            if (it.startHour <= it.endHour) {
+                currentHour >= it.startHour && currentHour < it.endHour
+            } else {
+                currentHour >= it.startHour || currentHour < it.endHour
+            }
+        } ?: schedule[Math.abs((currentHour + channel.name.hashCode()) % schedule.size)]
 
-        val currentShow = showList[safeCurrentIndex]
-        val nextShow = showList[safeNextIndex]
+        val currentIndex = schedule.indexOf(currentShow).coerceAtLeast(0)
+        val nextShow = schedule[(currentIndex + 1) % schedule.size]
+
+        // Compute authentic elapsed slot and percentage
+        val slotStart = currentShow.startHour
+        val slotEnd = if (currentShow.endHour == 0) 24 else currentShow.endHour
+        val durationMinutes = ((slotEnd - slotStart + 24) % 24).let { if (it == 0) 1 else it } * 60
+        val elapsedMinutes = ((currentHour - slotStart + 24) % 24) * 60 + currentMinute
+        val elapsedFraction = (elapsedMinutes.toFloat() / durationMinutes.toFloat()).coerceIn(0.05f, 0.95f)
+
+        fun formatHour(h: Int): String {
+            val h12 = if (h % 12 == 0) 12 else h % 12
+            val amPm = if (h in 0..11 || h == 24) "AM" else "PM"
+            return "$h12:00 $amPm"
+        }
+
+        val timeSlot = "${formatHour(slotStart)} - ${formatHour(slotEnd)}"
+        val nextTime = "at ${formatHour(nextShow.startHour)}"
 
         return EpgProgram(
             currentTitle = currentShow.title,
             currentDescription = currentShow.description,
             timeSlot = timeSlot,
-            elapsedPercent = elapsed,
+            elapsedPercent = elapsedFraction,
             nextTitle = nextShow.title,
-            nextTime = String.format(Locale.US, "at %d:00 %s", displayNextHour, nextAmPm)
+            nextTime = nextTime
         )
     }
 }

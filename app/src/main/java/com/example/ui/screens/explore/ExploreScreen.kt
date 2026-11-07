@@ -59,6 +59,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.filled.BusinessCenter
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.FamilyRestroom
+import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.HistoryEdu
+import androidx.compose.material.icons.filled.Landscape
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.TheaterComedy
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.WbSunny
 import com.example.data.model.Category
 import com.example.data.model.Channel
 import com.example.data.model.Country
@@ -100,6 +118,7 @@ fun ExploreScreen(
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    lastWatchedChannelId: String? = null,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background != Color.White
@@ -262,7 +281,18 @@ fun ExploreScreen(
                     }
                 }
             } else {
+                val gridState = rememberLazyGridState()
+                androidx.compose.runtime.LaunchedEffect(lastWatchedChannelId, matchingChannels) {
+                    if (!lastWatchedChannelId.isNullOrEmpty()) {
+                        val targetIndex = matchingChannels.indexOfFirst { it.id == lastWatchedChannelId }
+                        if (targetIndex >= 0) {
+                            gridState.scrollToItem(targetIndex)
+                        }
+                    }
+                }
+
                 LazyVerticalGrid(
+                    state = gridState,
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -1190,7 +1220,7 @@ fun BigLanguageCard(
                     shape = cardShape
                 )
         ) {
-            // Language Icon
+            // Language Native Script Character Icon
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -1199,11 +1229,12 @@ fun BigLanguageCard(
                     .background(if (isDark) Color(0x33FFFFFF) else Color(0x224F2BC4)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Language,
-                    contentDescription = null,
-                    tint = if (isDark) GlowLilac else StreamViolet,
-                    modifier = Modifier.size(30.dp)
+                Text(
+                    text = getLanguageNativeCharacter(language.name, language.code),
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    color = if (isDark) GlowLilac else StreamViolet
                 )
             }
 
@@ -1317,10 +1348,66 @@ private fun getCategoryIcon(name: String): ImageVector {
     val lower = name.lowercase()
     return when {
         lower.contains("sport") -> Icons.Default.SportsSoccer
-        lower.contains("movie") || lower.contains("series") || lower.contains("film") -> Icons.Default.Movie
+        lower.contains("movie") || lower.contains("film") -> Icons.Default.Movie
+        lower.contains("series") -> Icons.Default.VideoLibrary
         lower.contains("music") -> Icons.Default.MusicNote
         lower.contains("news") -> Icons.Default.Tv
+        lower.contains("kid") || lower.contains("animat") -> Icons.Default.Face
+        lower.contains("comedy") -> Icons.Default.TheaterComedy
+        lower.contains("docu") -> Icons.Default.HistoryEdu
+        lower.contains("educat") -> Icons.Default.School
+        lower.contains("auto") || lower.contains("motor") -> Icons.Default.DirectionsCar
+        lower.contains("business") || lower.contains("econom") || lower.contains("finance") -> Icons.Default.BusinessCenter
+        lower.contains("cook") || lower.contains("food") -> Icons.Default.Restaurant
+        lower.contains("science") -> Icons.Default.Science
+        lower.contains("travel") -> Icons.Default.FlightTakeoff
+        lower.contains("weather") -> Icons.Default.WbSunny
+        lower.contains("tech") -> Icons.Default.Computer
+        lower.contains("shop") -> Icons.Default.ShoppingCart
+        lower.contains("relig") -> Icons.Default.SelfImprovement
+        lower.contains("family") -> Icons.Default.FamilyRestroom
+        lower.contains("outdoor") -> Icons.Default.Landscape
+        lower.contains("entertain") -> Icons.Default.LiveTv
         else -> Icons.Default.Public
+    }
+}
+
+fun getLanguageNativeCharacter(name: String, code: String): String {
+    val n = name.lowercase(java.util.Locale.ROOT)
+    val c = code.lowercase(java.util.Locale.ROOT)
+    return when {
+        n.contains("punjabi") || n.contains("panjabi") || c == "pan" -> "ੴ"
+        n.contains("hindi") || c == "hin" -> "अ"
+        n.contains("english") || c == "eng" -> "Aa"
+        n.contains("urdu") || c == "urd" -> "ا"
+        n.contains("tamil") || c == "tam" -> "அ"
+        n.contains("telugu") || c == "tel" -> "అ"
+        n.contains("bengali") || n.contains("bangla") || c == "ben" -> "অ"
+        n.contains("malayalam") || c == "mal" -> "അ"
+        n.contains("kannada") || c == "kan" -> "ಅ"
+        n.contains("marathi") || c == "mar" -> "म"
+        n.contains("gujarati") || c == "guj" -> "ગુ"
+        n.contains("arabic") || c == "ara" -> "ض"
+        n.contains("chinese") || c in listOf("zho", "cmn", "chi") -> "文"
+        n.contains("japanese") || c == "jpn" -> "あ"
+        n.contains("korean") || c == "kor" -> "한"
+        n.contains("russian") || c == "rus" -> "Я"
+        n.contains("hebrew") || c == "heb" -> "א"
+        n.contains("greek") || c == "ell" -> "Ω"
+        n.contains("turkish") || c == "tur" -> "Tr"
+        n.contains("spanish") || c == "spa" -> "ñ"
+        n.contains("french") || c == "fra" -> "Fr"
+        n.contains("german") || c == "deu" -> "De"
+        n.contains("italian") || c == "ita" -> "It"
+        n.contains("portuguese") || c == "por" -> "Pt"
+        n.contains("thai") || c == "tha" -> "ไทย"
+        n.contains("vietnamese") || c == "vie" -> "Vi"
+        n.contains("persian") || n.contains("farsi") || c in listOf("fas", "per") -> "ف"
+        n.contains("indonesian") || c == "ind" -> "Id"
+        n.contains("polish") || c == "pol" -> "Pl"
+        n.contains("dutch") || c == "nld" -> "Nl"
+        n.contains("swedish") || c == "swe" -> "Sv"
+        else -> if (c.length >= 2) c.take(2).replaceFirstChar { it.uppercase() } else name.take(2)
     }
 }
 

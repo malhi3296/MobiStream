@@ -63,6 +63,7 @@ fun HomeScreen(
     slides: List<SlideShowItem>,
     pinnedAndFavorites: List<Channel>,
     countryChannels: List<Channel>,
+    channelsYouMayLike: List<Channel> = emptyList(),
     globalPopularChannels: List<Channel>,
     trendingChannels: List<Channel>,
     categories: List<Category>,
@@ -205,6 +206,31 @@ fun HomeScreen(
                                 onPlayClick = { onSelectChannel(channel) },
                                 onToggleFavorite = { onToggleFavorite(channel.id) }
                             )
+                        }
+                    }
+                }
+
+                // Requirement: "Channels You May Like" section (above popular global channels, curated by preferred languages and categories)
+                if (channelsYouMayLike.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        SectionHeader(
+                            title = "Channels You May Like",
+                            onSeeAllClick = onNavigateToExplore
+                        )
+
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            items(channelsYouMayLike) { channel ->
+                                CountryChannelCard(
+                                    channel = channel,
+                                    onPlayClick = { onSelectChannel(channel) },
+                                    onToggleFavorite = { onToggleFavorite(channel.id) }
+                                )
+                            }
                         }
                     }
                 }

@@ -35,7 +35,11 @@ import com.example.ui.screens.player.PlayerScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.splash.SplashScreen
 import com.example.ui.theme.MobiStreamTheme
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.example.ui.components.OnboardingModal
 import com.example.ui.viewmodel.MobiStreamViewModel
+import kotlinx.coroutines.launch
 
 enum class ScreenState {
     MAIN,
@@ -48,11 +52,15 @@ fun MainMobiStreamApp(
     viewModel: MobiStreamViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val allChannels by viewModel.allChannels.collectAsStateWithLifecycle()
     val filteredChannels by viewModel.filteredChannels.collectAsStateWithLifecycle()
     val pinnedAndFavorites by viewModel.pinnedAndFavorites.collectAsStateWithLifecycle()
     val countryChannels by viewModel.countryChannels.collectAsStateWithLifecycle()
+    val channelsYouMayLike by viewModel.channelsYouMayLike.collectAsStateWithLifecycle()
     val globalPopularChannels by viewModel.globalPopularChannels.collectAsStateWithLifecycle()
     val trendingChannels by viewModel.trendingChannels.collectAsStateWithLifecycle()
     val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
@@ -74,8 +82,45 @@ fun MainMobiStreamApp(
         viewModel.onLocationPermissionResult(isGranted)
     }
 
+    // SAF Document Launchers for Portable Backup Export & Import
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val json = viewModel.exportBackupJson()
+                    context.contentResolver.openOutputStream(uri)?.use { os ->
+                        os.write(json.toByteArray())
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val json = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.bufferedReader().use { it.readText() }
+                    }
+                    if (!json.isNullOrBlank()) {
+                        viewModel.importBackupJson(json)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
-        if (!uiState.hasAskedLocationPermission) {
+        if (!uiState.hasAskedLocationPermission && uiState.hasCompletedOnboarding) {
             permissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -172,8 +217,19 @@ fun MainMobiStreamApp(
                                 SettingsScreen(
                                     isDarkMode = uiState.isDarkMode,
                                     bufferMode = uiState.streamBufferMode,
+                                    preferredLanguages = uiState.preferredLanguages,
+                                    favoriteCategories = uiState.favoriteCategories,
+                                    isGoogleDriveBackupEnabled = uiState.isGoogleDriveBackupEnabled,
+                                    googleDriveLastBackupTime = uiState.googleDriveLastBackupTime,
                                     onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) },
                                     onSetBufferMode = { mode -> viewModel.setStreamBufferMode(mode) },
+                                    onSetPreferredLanguages = { viewModel.setPreferredLanguages(it) },
+                                    onSetFavoriteCategories = { viewModel.setFavoriteCategories(it) },
+                                    onToggleGoogleDriveBackup = { viewModel.setGoogleDriveBackupEnabled(it) },
+                                    onBackupToDrive = { viewModel.backupToGoogleDrive() },
+                                    onRestoreFromDrive = { viewModel.restoreFromGoogleDrive() },
+                                    onExportBackupFile = { exportLauncher.launch("mobistream_backup.json") },
+                                    onImportBackupFile = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
                                     onClearCache = { viewModel.loadData(forceRefresh = true) }
                                 )
                             } else {
@@ -188,6 +244,7 @@ fun MainMobiStreamApp(
                                                 slides = slideshowItems,
                                                 pinnedAndFavorites = pinnedAndFavorites,
                                                 countryChannels = countryChannels,
+                                                channelsYouMayLike = channelsYouMayLike,
                                                 globalPopularChannels = globalPopularChannels,
                                                 trendingChannels = trendingChannels,
                                                 categories = uiState.availableCategories,
@@ -198,6 +255,7 @@ fun MainMobiStreamApp(
                                                 isLoading = uiState.isLoading,
                                                 onToggleTheme = { viewModel.toggleTheme(!uiState.isDarkMode) },
                                                 onSelectChannel = { ch ->
+                                                    viewModel.setLastWatchedChannel(ch.id)
                                                     playingChannel = ch
                                                     screenState = ScreenState.PLAYER
                                                 },
@@ -236,12 +294,14 @@ fun MainMobiStreamApp(
                                                 onSelectGroup = { group -> viewModel.selectExploreGroup(group) },
                                                 sortCategoryChannels = viewModel::sortCategoryChannels,
                                                 onSelectChannel = { ch ->
+                                                    viewModel.setLastWatchedChannel(ch.id)
                                                     playingChannel = ch
                                                     screenState = ScreenState.PLAYER
                                                 },
                                                 onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
                                                 onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
-                                                onFetchLanguageChannels = viewModel::fetchLanguageChannels
+                                                onFetchLanguageChannels = viewModel::fetchLanguageChannels,
+                                                lastWatchedChannelId = uiState.lastWatchedChannelId
                                             )
                                         }
 
@@ -249,6 +309,7 @@ fun MainMobiStreamApp(
                                             FavoritesScreen(
                                                 favoriteChannels = favoriteChannels,
                                                 onSelectChannel = { ch ->
+                                                    viewModel.setLastWatchedChannel(ch.id)
                                                     playingChannel = ch
                                                     screenState = ScreenState.PLAYER
                                                 },
@@ -292,6 +353,35 @@ fun MainMobiStreamApp(
             if (showUserInfoModal) {
                 UserInfoModal(
                     onDismiss = { showUserInfoModal = false }
+                )
+            }
+
+            // Onboarding Modal with Permissions, Backup check, Preferred Languages & Categories
+            if (!uiState.hasCompletedOnboarding) {
+                OnboardingModal(
+                    onDismiss = { viewModel.completeOnboarding() },
+                    onRequestPermissions = {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    },
+                    onRestoreDrive = {
+                        viewModel.restoreFromGoogleDrive()
+                        viewModel.completeOnboarding()
+                    },
+                    onImportFile = {
+                        importLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
+                        viewModel.completeOnboarding()
+                    },
+                    onFinish = { langs, cats ->
+                        viewModel.setPreferredLanguages(langs)
+                        viewModel.setFavoriteCategories(cats)
+                        viewModel.completeOnboarding()
+                    },
+                    isDark = uiState.isDarkMode
                 )
             }
         }

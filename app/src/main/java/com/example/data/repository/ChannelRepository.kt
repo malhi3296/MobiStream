@@ -249,12 +249,30 @@ class ChannelRepository(
         }
     }
 
+    suspend fun setFavorite(channelId: String, isFavorite: Boolean) = withContext(Dispatchers.IO) {
+        val isFav = favoriteDao.isFavorite(channelId)
+        if (isFavorite && !isFav) {
+            favoriteDao.insertFavorite(FavoriteChannelEntity(channelId = channelId))
+        } else if (!isFavorite && isFav) {
+            favoriteDao.deleteFavorite(channelId)
+        }
+    }
+
     suspend fun togglePinned(channelId: String) = withContext(Dispatchers.IO) {
         val isPin = pinnedDao.isPinned(channelId)
         if (isPin) {
             pinnedDao.deletePinned(channelId)
         } else {
             pinnedDao.insertPinned(PinnedChannelEntity(channelId = channelId))
+        }
+    }
+
+    suspend fun setPinned(channelId: String, isPinned: Boolean) = withContext(Dispatchers.IO) {
+        val isPin = pinnedDao.isPinned(channelId)
+        if (isPinned && !isPin) {
+            pinnedDao.insertPinned(PinnedChannelEntity(channelId = channelId))
+        } else if (!isPinned && isPin) {
+            pinnedDao.deletePinned(channelId)
         }
     }
 
