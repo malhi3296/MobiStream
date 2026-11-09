@@ -82,7 +82,7 @@ fun OnboardingModal(
     var selectedCats by remember { mutableStateOf(setOf("News", "Sports", "Movies", "Music")) }
 
     val availableLangs = listOf(
-        "Punjabi" to "ੴ",
+        "Punjabi" to "ਅ",
         "Hindi" to "अ",
         "English" to "Aa",
         "Urdu" to "ا",

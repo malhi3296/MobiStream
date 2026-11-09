@@ -550,7 +550,7 @@ fun SettingsScreen(
                                 color = if (isDark) GlowLilac else StreamViolet
                             )
                             Text(
-                                text = "Version 1.0.3 (Build 103)",
+                                text = "Version 1.0.4 (Build 104)",
                                 fontFamily = InterFontFamily,
                                 fontSize = 11.sp,
                                 color = subtitleTextColor

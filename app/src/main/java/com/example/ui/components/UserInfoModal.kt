@@ -341,7 +341,7 @@ fun UserInfoModal(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Version 1.0.3 (Build 103) • Streaming made mobile.",
+                        text = "Version 1.0.4 (Build 104) • Streaming made mobile.",
                         fontFamily = InterFontFamily,
                         fontSize = 12.sp,
                         color = if (isDark) GlowLilac else StreamViolet

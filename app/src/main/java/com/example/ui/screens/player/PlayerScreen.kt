@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.media.AudioManager
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -13,6 +14,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -80,9 +82,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -130,6 +134,13 @@ fun PlayerScreen(
     var isMuted by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
     var resizeModeIndex by remember { mutableIntStateOf(0) }
+    var hasClosedCaptions by remember(channel.id) {
+        mutableStateOf(
+            channel.name.contains("CC", ignoreCase = true) ||
+            channel.quality.contains("CC", ignoreCase = true)
+        )
+    }
+    var isClosedCaptionsEnabled by remember { mutableStateOf(true) }
 
     // Gesture control states (Requirement 1)
     var playerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -211,6 +222,20 @@ fun PlayerScreen(
                 isBuffering = false
                 streamError = "Stream temporarily unavailable: ${error.message ?: "Network error"}"
             }
+
+            override fun onTracksChanged(tracks: Tracks) {
+                var ccFound = false
+                for (group in tracks.groups) {
+                    if (group.type == C.TRACK_TYPE_TEXT && group.length > 0) {
+                        ccFound = true
+                        break
+                    }
+                }
+                if (!ccFound && (channel.name.contains("CC", ignoreCase = true) || channel.quality.contains("CC", ignoreCase = true))) {
+                    ccFound = true
+                }
+                hasClosedCaptions = ccFound
+            }
         }
         exoPlayer.addListener(listener)
 
@@ -235,6 +260,15 @@ fun PlayerScreen(
             showGestureIndicator = false
             activeGesture = null
         }
+    }
+
+    val onToggleClosedCaptions = {
+        val next = !isClosedCaptionsEnabled
+        isClosedCaptionsEnabled = next
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !next)
+            .build()
     }
 
     BackHandler {
@@ -314,10 +348,13 @@ fun PlayerScreen(
                                 ViewGroup.LayoutParams.MATCH_PARENT
                             )
                             resizeMode = resizeModes[resizeModeIndex]
+                            subtitleView?.setUserDefaultStyle()
+                            subtitleView?.setUserDefaultTextSize()
                         }
                     },
                     update = { view ->
                         view.resizeMode = resizeModes[resizeModeIndex]
+                        view.subtitleView?.visibility = if (isClosedCaptionsEnabled) View.VISIBLE else View.GONE
                     },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -385,6 +422,8 @@ fun PlayerScreen(
                     isMuted = isMuted,
                     isFullscreen = true,
                     showControls = showControls,
+                    hasClosedCaptions = hasClosedCaptions,
+                    isClosedCaptionsEnabled = isClosedCaptionsEnabled,
                     epgProgramTitle = epgInfo.currentTitle,
                     epgTimeSlot = epgInfo.timeSlot,
                     epgProgress = epgInfo.elapsedPercent,
@@ -404,6 +443,7 @@ fun PlayerScreen(
                         resizeModeIndex = (resizeModeIndex + 1) % resizeModes.size
                     },
                     onToggleFavorite = { onToggleFavorite(channel.id) },
+                    onToggleClosedCaptions = onToggleClosedCaptions,
                     onRetry = {
                         streamError = null
                         isBuffering = true
@@ -438,10 +478,13 @@ fun PlayerScreen(
                                     ViewGroup.LayoutParams.MATCH_PARENT
                                 )
                                 resizeMode = resizeModes[resizeModeIndex]
+                                subtitleView?.setUserDefaultStyle()
+                                subtitleView?.setUserDefaultTextSize()
                             }
                         },
                         update = { view ->
                             view.resizeMode = resizeModes[resizeModeIndex]
+                            view.subtitleView?.visibility = if (isClosedCaptionsEnabled) View.VISIBLE else View.GONE
                         },
                         modifier = Modifier.fillMaxSize()
                     )
@@ -454,6 +497,8 @@ fun PlayerScreen(
                         isMuted = isMuted,
                         isFullscreen = false,
                         showControls = showControls,
+                        hasClosedCaptions = hasClosedCaptions,
+                        isClosedCaptionsEnabled = isClosedCaptionsEnabled,
                         epgProgramTitle = epgInfo.currentTitle,
                         epgTimeSlot = epgInfo.timeSlot,
                         epgProgress = epgInfo.elapsedPercent,
@@ -473,6 +518,7 @@ fun PlayerScreen(
                             resizeModeIndex = (resizeModeIndex + 1) % resizeModes.size
                         },
                         onToggleFavorite = { onToggleFavorite(channel.id) },
+                        onToggleClosedCaptions = onToggleClosedCaptions,
                         onRetry = {
                             streamError = null
                             isBuffering = true
@@ -715,6 +761,8 @@ private fun PlayerControlsOverlay(
     isMuted: Boolean,
     isFullscreen: Boolean,
     showControls: Boolean,
+    hasClosedCaptions: Boolean = false,
+    isClosedCaptionsEnabled: Boolean = true,
     epgProgramTitle: String,
     epgTimeSlot: String,
     epgProgress: Float,
@@ -725,6 +773,7 @@ private fun PlayerControlsOverlay(
     onToggleFullscreen: () -> Unit,
     onToggleResize: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onToggleClosedCaptions: () -> Unit = {},
     onRetry: () -> Unit
 ) {
     AnimatedVisibility(

@@ -1406,7 +1406,7 @@ fun getLanguageNativeCharacter(name: String, code: String): String {
     val n = name.lowercase(java.util.Locale.ROOT)
     val c = code.lowercase(java.util.Locale.ROOT)
     return when {
-        n.contains("punjabi") || n.contains("panjabi") || c == "pan" -> "ੴ"
+        n.contains("punjabi") || n.contains("panjabi") || c == "pan" -> "ਅ"
         n.contains("hindi") || c == "hin" -> "अ"
         n.contains("english") || c == "eng" -> "Aa"
         n.contains("urdu") || c == "urd" -> "ا"
