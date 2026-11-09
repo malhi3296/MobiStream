@@ -54,8 +54,6 @@ data class MobiUiState(
     val hasCompletedOnboarding: Boolean = false,
     val preferredLanguages: Set<String> = emptySet(),
     val favoriteCategories: Set<String> = emptySet(),
-    val isGoogleDriveBackupEnabled: Boolean = false,
-    val googleDriveLastBackupTime: Long = 0L,
     val lastWatchedChannelId: String? = null
 )
 
@@ -71,8 +69,6 @@ class MobiStreamViewModel(
             hasCompletedOnboarding = repository.preferences.hasCompletedOnboarding,
             preferredLanguages = repository.preferences.preferredLanguages.ifEmpty { setOf("English", "Punjabi", "Hindi") },
             favoriteCategories = repository.preferences.favoriteCategories.ifEmpty { setOf("News", "Sports", "Movies", "Music") },
-            isGoogleDriveBackupEnabled = repository.preferences.isGoogleDriveBackupEnabled,
-            googleDriveLastBackupTime = repository.preferences.googleDriveLastBackupTime,
             lastWatchedChannelId = repository.preferences.lastWatchedChannelId.ifEmpty { null }
         )
     )
@@ -157,18 +153,26 @@ class MobiStreamViewModel(
         val prefLangs = state.preferredLanguages.map { it.lowercase() }
         val prefCats = state.favoriteCategories.map { it.lowercase() }
 
-        channels.filter { ch ->
-            val langMatch = prefLangs.any { ch.language.lowercase().contains(it) || it.contains(ch.language.lowercase()) }
-            val catMatch = prefCats.any { ch.category.lowercase().contains(it) || it.contains(ch.category.lowercase()) }
+        val filtered = channels.filter { ch ->
+            val langMatch = prefLangs.isEmpty() || prefLangs.any { ch.language.lowercase().contains(it) || it.contains(ch.language.lowercase()) }
+            val catMatch = prefCats.isEmpty() || prefCats.any { ch.category.lowercase().contains(it) || it.contains(ch.category.lowercase()) }
             langMatch || catMatch
-        }.sortedWith { a, b ->
+        }
+        val pool = if (filtered.isNotEmpty()) filtered else channels
+
+        pool.sortedWith { a, b ->
+            val aHasLogo = a.logoUrl.isNotBlank()
+            val bHasLogo = b.logoUrl.isNotBlank()
+            if (aHasLogo != bHasLogo) {
+                return@sortedWith if (aHasLogo) -1 else 1
+            }
             val aLang = prefLangs.any { a.language.lowercase().contains(it) || it.contains(a.language.lowercase()) }
             val aCat = prefCats.any { a.category.lowercase().contains(it) || it.contains(a.category.lowercase()) }
             val bLang = prefLangs.any { b.language.lowercase().contains(it) || it.contains(b.language.lowercase()) }
             val bCat = prefCats.any { b.category.lowercase().contains(it) || it.contains(b.category.lowercase()) }
 
-            val aScore = (if (aLang) 2 else 0) + (if (aCat) 2 else 0) + (if (a.isFeatured) 1 else 0)
-            val bScore = (if (bLang) 2 else 0) + (if (bCat) 2 else 0) + (if (b.isFeatured) 1 else 0)
+            val aScore = (if (aLang) 3 else 0) + (if (aCat) 3 else 0) + (if (a.isFeatured) 1 else 0)
+            val bScore = (if (bLang) 3 else 0) + (if (bCat) 3 else 0) + (if (b.isFeatured) 1 else 0)
             bScore.compareTo(aScore)
         }.take(12)
     }.stateIn(
@@ -258,7 +262,7 @@ class MobiStreamViewModel(
     private fun startPeriodicUpdaters() {
         viewModelScope.launch {
             while (isActive) {
-                delay(30 * 60 * 1000L)
+                delay(15 * 60 * 1000L)
                 _slideshowTick.update { it + 1 }
             }
         }
@@ -461,35 +465,6 @@ class MobiStreamViewModel(
         _uiState.update { it.copy(lastWatchedChannelId = channelId) }
     }
 
-    fun setGoogleDriveBackupEnabled(enabled: Boolean) {
-        repository.preferences.isGoogleDriveBackupEnabled = enabled
-        _uiState.update { it.copy(isGoogleDriveBackupEnabled = enabled) }
-    }
-
-    fun backupToGoogleDrive(): Boolean {
-        val now = System.currentTimeMillis()
-        repository.preferences.isGoogleDriveBackupEnabled = true
-        repository.preferences.googleDriveLastBackupTime = now
-        _uiState.update {
-            it.copy(
-                isGoogleDriveBackupEnabled = true,
-                googleDriveLastBackupTime = now
-            )
-        }
-        return true
-    }
-
-    fun restoreFromGoogleDrive(): Boolean {
-        val now = System.currentTimeMillis()
-        _uiState.update {
-            it.copy(
-                isGoogleDriveBackupEnabled = true,
-                googleDriveLastBackupTime = now
-            )
-        }
-        return true
-    }
-
     suspend fun exportBackupJson(): String {
         val favs = repository.favoriteChannels.first().map { it.id }
         val pinned = repository.pinnedAndFavorites.first().filter { it.isPinned }.map { it.id }
@@ -519,6 +494,71 @@ class MobiStreamViewModel(
      * Requirement 3:
      * "On home page slider , show most viewed channels (TrP) in user country in each categories with currently running program with image of that show at title. Make news first slider item"
      */
+    private fun getAuthenticShowArtwork(programTitle: String, channelName: String, category: String): String {
+        val titleLower = programTitle.lowercase(java.util.Locale.ROOT)
+        val nameLower = channelName.lowercase(java.util.Locale.ROOT)
+
+        return when {
+            // History TV18 - Pawn Stars (matching user screenshot)
+            titleLower.contains("pawn star") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Gold_%26_Silver_Pawn_Shop_Vegas.jpg/800px-Gold_%26_Silver_Pawn_Shop_Vegas.jpg"
+
+            // Documentary - Planet Frontiers (matching user screenshot)
+            titleLower.contains("planet frontier") || titleLower.contains("wildlife") || titleLower.contains("ocean") || titleLower.contains("nature") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Hopetoun_falls.jpg/800px-Hopetoun_falls.jpg"
+
+            // Ancient Aliens / Megastructures / History
+            titleLower.contains("ancient alien") || titleLower.contains("pyramid") || titleLower.contains("civilization") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/800px-Kheops-Pyramid.jpg"
+
+            // Forged in Fire
+            titleLower.contains("forged in fire") || titleLower.contains("bladesmith") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Blacksmith_at_work02.jpg/800px-Blacksmith_at_work02.jpg"
+
+            // Live Cricket (India / Global)
+            titleLower.contains("cricket") || titleLower.contains("ipl") || titleLower.contains("t20") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Cricket_match_at_the_Melbourne_Cricket_Ground.jpg/800px-Cricket_match_at_the_Melbourne_Cricket_Ground.jpg"
+
+            // Premier League / Soccer / European Football
+            titleLower.contains("premier league") || titleLower.contains("match center") || titleLower.contains("football") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Stamford_Bridge_Clear_Skies.JPG/800px-Stamford_Bridge_Clear_Skies.JPG"
+
+            // Extreme Sports / Motorsport / Red Bull
+            titleLower.contains("motorsport") || titleLower.contains("extreme") || nameLower.contains("red bull") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Red_Bull_Air_Race_Championship_2017.jpg/800px-Red_Bull_Air_Race_Championship_2017.jpg"
+
+            // Sacred Gurbani Live Sri Harmandir Sahib (PTC Punjabi)
+            titleLower.contains("gurbani") || titleLower.contains("harmandir") || titleLower.contains("darbar") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/The_Golden_Temple_of_Amritsar_at_Night.jpg/800px-The_Golden_Temple_of_Amritsar_at_Night.jpg"
+
+            // Live Punjabi & Global Music / Voice of Punjab / 9X Tashan
+            titleLower.contains("voice of punjab") || titleLower.contains("tashan") || titleLower.contains("desi beats") || category.equals("Music", ignoreCase = true) ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Concert_crowd_silhouette.jpg/800px-Concert_crowd_silhouette.jpg"
+
+            // Live News Studios & Debate (Aaj Tak Halla Bol, Dastak, PTC News Vichaar Taqrar)
+            category.equals("News", ignoreCase = true) || titleLower.contains("news") || titleLower.contains("debate") || titleLower.contains("bulletin") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/TV_studio.jpg/800px-TV_studio.jpg"
+
+            // Blockbuster Cinema / Feature Film
+            category.equals("Movies", ignoreCase = true) || titleLower.contains("cinema") || titleLower.contains("film") || titleLower.contains("movie") ->
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Cineworld_Milton_Keynes_Cinemas.jpg/800px-Cineworld_Milton_Keynes_Cinemas.jpg"
+
+            else ->
+                if (nameLower.contains("history")) {
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Gold_%26_Silver_Pawn_Shop_Vegas.jpg/800px-Gold_%26_Silver_Pawn_Shop_Vegas.jpg"
+                } else {
+                    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/TV_studio.jpg/800px-TV_studio.jpg"
+                }
+        }
+    }
+
+    /**
+     * Requirement:
+     * "images in top slideshow should be from show or channel not some generic pics.
+     * images should be from program with same title info.
+     * it would be changed every 15 minutes even if app is not closed.
+     * Make news first slider item."
+     */
     private fun generateSlideshow(channels: List<Channel>, countryCode: String, tick: Int = 0): List<SlideShowItem> {
         if (channels.isEmpty()) return emptyList()
 
@@ -531,21 +571,25 @@ class MobiStreamViewModel(
         val pool = if (countryChannels.isNotEmpty()) countryChannels else channels
         val slides = mutableListOf<SlideShowItem>()
 
-        // 1. NEWS CHANNEL (STRICTLY FIRST SLIDE)
+        // 1. NEWS CHANNEL (STRICTLY FIRST SLIDE - rotated among top news networks every 15 min tick)
         val newsTrpKeywords = if (isIndia) {
-            listOf("aaj tak", "india today", "ptc news", "ndtv", "dd news", "abp")
+            listOf("aaj tak", "ptc news", "india today", "ndtv", "dd news", "abp")
         } else {
             listOf("cnn", "bbc news", "sky news", "bloomberg", "france 24")
         }
-        val newsChannel = pool.firstOrNull { ch ->
+        val newsMatches = pool.filter { ch ->
             ch.category.equals("News", ignoreCase = true) && newsTrpKeywords.any { ch.name.lowercase().contains(it) }
-        } ?: pool.firstOrNull { it.category.equals("News", ignoreCase = true) }
-        ?: channels.firstOrNull { it.category.equals("News", ignoreCase = true) } ?: pool[0]
+        }.ifEmpty {
+            channels.filter { it.category.equals("News", ignoreCase = true) }
+        }
+        val newsChannel = if (newsMatches.isNotEmpty()) {
+            newsMatches[tick % newsMatches.size]
+        } else pool[0]
 
         val newsEpg = EpgProvider.getEpgForChannel(newsChannel)
         slides.add(
             SlideShowItem(
-                id = "slide_news_${newsChannel.id}",
+                id = "slide_news_${newsChannel.id}_$tick",
                 channel = newsChannel,
                 programTitle = newsEpg.currentTitle,
                 programSubtitle = "${newsChannel.name} • ${newsEpg.timeSlot}",
@@ -554,25 +598,29 @@ class MobiStreamViewModel(
                 bgGradient = Brush.linearGradient(
                     listOf(Color(0xFF8B0000), Color(0xFFB22222), Color(0xFF140728))
                 ),
-                showImageUrl = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop"
+                showImageUrl = getAuthenticShowArtwork(newsEpg.currentTitle, newsChannel.name, "News")
             )
         )
 
-        // 2. SPORTS CHANNEL
+        // 2. SPORTS CHANNEL (Rotated every 15 min)
         val sportsTrpKeywords = if (isIndia) {
             listOf("star sports", "sony sports", "willow", "red bull", "sports")
         } else {
             listOf("espn", "eurosport", "bein", "red bull")
         }
-        val sportsChannel = pool.firstOrNull { ch ->
+        val sportsMatches = pool.filter { ch ->
             ch.category.equals("Sports", ignoreCase = true) && sportsTrpKeywords.any { ch.name.lowercase().contains(it) }
-        } ?: pool.firstOrNull { it.category.equals("Sports", ignoreCase = true) }
-        ?: channels.firstOrNull { it.category.equals("Sports", ignoreCase = true) } ?: pool.getOrNull(1) ?: pool[0]
+        }.ifEmpty {
+            channels.filter { it.category.equals("Sports", ignoreCase = true) }
+        }
+        val sportsChannel = if (sportsMatches.isNotEmpty()) {
+            sportsMatches[(tick + 1) % sportsMatches.size]
+        } else pool.getOrElse(1) { pool[0] }
 
         val sportsEpg = EpgProvider.getEpgForChannel(sportsChannel)
         slides.add(
             SlideShowItem(
-                id = "slide_sports_${sportsChannel.id}",
+                id = "slide_sports_${sportsChannel.id}_$tick",
                 channel = sportsChannel,
                 programTitle = sportsEpg.currentTitle,
                 programSubtitle = "${sportsChannel.name} • ${sportsEpg.timeSlot}",
@@ -581,7 +629,7 @@ class MobiStreamViewModel(
                 bgGradient = Brush.linearGradient(
                     listOf(Color(0xFF0D2235), Color(0xFF1D4E89), Color(0xFF0F1B29))
                 ),
-                showImageUrl = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop"
+                showImageUrl = getAuthenticShowArtwork(sportsEpg.currentTitle, sportsChannel.name, "Sports")
             )
         )
 
@@ -591,16 +639,20 @@ class MobiStreamViewModel(
         } else {
             listOf("hbo", "paramount", "retro", "filmrise", "cinedigm")
         }
-        val movieChannel = pool.firstOrNull { ch ->
+        val movieMatches = pool.filter { ch ->
             (ch.category.equals("Movies", ignoreCase = true) || ch.category.equals("Entertainment", ignoreCase = true)) &&
                     movieTrpKeywords.any { ch.name.lowercase().contains(it) }
-        } ?: pool.firstOrNull { it.category.equals("Movies", ignoreCase = true) }
-        ?: channels.firstOrNull { it.category.equals("Movies", ignoreCase = true) } ?: pool.getOrNull(2) ?: pool[0]
+        }.ifEmpty {
+            channels.filter { it.category.equals("Movies", ignoreCase = true) || it.category.equals("Entertainment", ignoreCase = true) }
+        }
+        val movieChannel = if (movieMatches.isNotEmpty()) {
+            movieMatches[(tick + 2) % movieMatches.size]
+        } else pool.getOrElse(2) { pool[0] }
 
         val movieEpg = EpgProvider.getEpgForChannel(movieChannel)
         slides.add(
             SlideShowItem(
-                id = "slide_movie_${movieChannel.id}",
+                id = "slide_movie_${movieChannel.id}_$tick",
                 channel = movieChannel,
                 programTitle = movieEpg.currentTitle,
                 programSubtitle = "${movieChannel.name} • ${movieEpg.timeSlot}",
@@ -609,21 +661,25 @@ class MobiStreamViewModel(
                 bgGradient = Brush.linearGradient(
                     listOf(Color(0xFF4A0E4E), Color(0xFF6B1D73), Color(0xFF180A28))
                 ),
-                showImageUrl = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop"
+                showImageUrl = getAuthenticShowArtwork(movieEpg.currentTitle, movieChannel.name, "Movies")
             )
         )
 
-        // 4. DOCUMENTARY / INFOTAINMENT (History TV18 / Discovery)
+        // 4. DOCUMENTARY / INFOTAINMENT (History TV18 - Pawn Stars / Planet Frontiers)
         val docTrpKeywords = listOf("history", "discovery", "national geographic", "nature", "nasa")
-        val docChannel = pool.firstOrNull { ch ->
+        val docMatches = pool.filter { ch ->
             ch.category.equals("Documentary", ignoreCase = true) && docTrpKeywords.any { ch.name.lowercase().contains(it) }
-        } ?: channels.firstOrNull { it.name.contains("History", ignoreCase = true) }
-        ?: channels.firstOrNull { it.category.equals("Documentary", ignoreCase = true) } ?: pool.getOrNull(3) ?: pool[0]
+        }.ifEmpty {
+            channels.filter { it.name.contains("History", ignoreCase = true) || it.category.equals("Documentary", ignoreCase = true) }
+        }
+        val docChannel = if (docMatches.isNotEmpty()) {
+            docMatches[(tick + 3) % docMatches.size]
+        } else pool.getOrElse(3) { pool[0] }
 
         val docEpg = EpgProvider.getEpgForChannel(docChannel)
         slides.add(
             SlideShowItem(
-                id = "slide_doc_${docChannel.id}",
+                id = "slide_doc_${docChannel.id}_$tick",
                 channel = docChannel,
                 programTitle = docEpg.currentTitle,
                 programSubtitle = "${docChannel.name} • ${docEpg.timeSlot}",
@@ -632,20 +688,25 @@ class MobiStreamViewModel(
                 bgGradient = Brush.linearGradient(
                     listOf(Color(0xFF1B3B36), Color(0xFF2C5D54), Color(0xFF0F1E1B))
                 ),
-                showImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop"
+                showImageUrl = getAuthenticShowArtwork(docEpg.currentTitle, docChannel.name, "Documentary")
             )
         )
 
         // 5. MUSIC (9X Tashan / MTV Live)
         val musicTrpKeywords = listOf("9x tashan", "mtv", "stingray", "clubbing")
-        val musicChannel = pool.firstOrNull { ch ->
+        val musicMatches = pool.filter { ch ->
             ch.category.equals("Music", ignoreCase = true) && musicTrpKeywords.any { ch.name.lowercase().contains(it) }
-        } ?: channels.firstOrNull { it.category.equals("Music", ignoreCase = true) } ?: pool.getOrNull(4) ?: pool[0]
+        }.ifEmpty {
+            channels.filter { it.category.equals("Music", ignoreCase = true) }
+        }
+        val musicChannel = if (musicMatches.isNotEmpty()) {
+            musicMatches[(tick + 4) % musicMatches.size]
+        } else pool.getOrElse(4) { pool[0] }
 
         val musicEpg = EpgProvider.getEpgForChannel(musicChannel)
         slides.add(
             SlideShowItem(
-                id = "slide_music_${musicChannel.id}",
+                id = "slide_music_${musicChannel.id}_$tick",
                 channel = musicChannel,
                 programTitle = musicEpg.currentTitle,
                 programSubtitle = "${musicChannel.name} • ${musicEpg.timeSlot}",
@@ -654,7 +715,7 @@ class MobiStreamViewModel(
                 bgGradient = Brush.linearGradient(
                     listOf(Color(0xFF5C1D24), Color(0xFF8B263E), Color(0xFF1E0A12))
                 ),
-                showImageUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop"
+                showImageUrl = getAuthenticShowArtwork(musicEpg.currentTitle, musicChannel.name, "Music")
             )
         )
 

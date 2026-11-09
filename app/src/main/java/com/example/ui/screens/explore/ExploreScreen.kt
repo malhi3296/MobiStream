@@ -150,11 +150,41 @@ fun ExploreScreen(
     }
 
     val languageCounts = remember(allChannels, languages) {
-        languages.associate { lang ->
-            lang.name to allChannels.count {
-                isChannelMatchingGroup(it, GroupType.LANGUAGE, lang.code, lang.name)
+        val map = mutableMapOf<String, Int>()
+        val codeToName = mutableMapOf<String, String>()
+        languages.forEach { l ->
+            val n = l.name
+            codeToName[l.code.lowercase(java.util.Locale.ROOT)] = n
+            codeToName[n.lowercase(java.util.Locale.ROOT)] = n
+        }
+        allChannels.forEach { ch ->
+            val lang = ch.language.trim().lowercase(java.util.Locale.ROOT)
+            val matched = codeToName[lang]
+            if (matched != null) {
+                map[matched] = (map[matched] ?: 0) + 1
+            } else {
+                val id = ch.id.lowercase(java.util.Locale.ROOT)
+                when {
+                    lang.contains("punjabi") || id.contains("punjabi") || id.contains(".pan@") -> map["Punjabi"] = (map["Punjabi"] ?: 0) + 1
+                    lang.contains("hindi") || id.contains(".hin@") -> map["Hindi"] = (map["Hindi"] ?: 0) + 1
+                    lang.contains("english") || id.contains(".eng@") -> map["English"] = (map["English"] ?: 0) + 1
+                    lang.contains("urdu") || id.contains(".urd@") -> map["Urdu"] = (map["Urdu"] ?: 0) + 1
+                    lang.contains("tamil") || id.contains(".tam@") -> map["Tamil"] = (map["Tamil"] ?: 0) + 1
+                    lang.contains("telugu") || id.contains(".tel@") -> map["Telugu"] = (map["Telugu"] ?: 0) + 1
+                    lang.contains("bengali") || id.contains(".ben@") -> map["Bengali"] = (map["Bengali"] ?: 0) + 1
+                    lang.contains("malayalam") || id.contains(".mal@") -> map["Malayalam"] = (map["Malayalam"] ?: 0) + 1
+                    lang.contains("kannada") || id.contains(".kan@") -> map["Kannada"] = (map["Kannada"] ?: 0) + 1
+                    lang.contains("marathi") || id.contains(".mar@") -> map["Marathi"] = (map["Marathi"] ?: 0) + 1
+                    lang.contains("gujarati") || id.contains(".guj@") -> map["Gujarati"] = (map["Gujarati"] ?: 0) + 1
+                    lang.contains("spanish") || id.contains(".spa@") -> map["Spanish"] = (map["Spanish"] ?: 0) + 1
+                    lang.contains("french") || id.contains(".fra@") -> map["French"] = (map["French"] ?: 0) + 1
+                    lang.contains("arabic") || id.contains(".ara@") -> map["Arabic"] = (map["Arabic"] ?: 0) + 1
+                    lang.contains("russian") || id.contains(".rus@") -> map["Russian"] = (map["Russian"] ?: 0) + 1
+                    lang.contains("german") || id.contains(".deu@") -> map["German"] = (map["German"] ?: 0) + 1
+                }
             }
         }
+        map
     }
 
     // High-contrast text colors
@@ -1411,17 +1441,19 @@ fun getLanguageNativeCharacter(name: String, code: String): String {
     }
 }
 
+private val NON_ALPHA_REGEX = Regex("[^a-zA-Z ]")
+
 fun isChannelMatchingGroup(channel: Channel, groupType: GroupType, identifier: String, title: String = ""): Boolean {
     return when (groupType) {
         GroupType.CATEGORY -> channel.category.equals(identifier, ignoreCase = true)
         GroupType.COUNTRY -> {
             channel.countryCode.equals(identifier, ignoreCase = true) ||
-                    (title.isNotBlank() && channel.country.contains(title.replace(Regex("[^a-zA-Z ]"), "").trim(), ignoreCase = true)) ||
+                    (title.isNotBlank() && channel.country.contains(title.replace(NON_ALPHA_REGEX, "").trim(), ignoreCase = true)) ||
                     channel.country.equals(identifier, ignoreCase = true)
         }
         GroupType.LANGUAGE -> {
             val target = identifier.trim().lowercase(java.util.Locale.ROOT)
-            val titleClean = title.replace("Channels", "").replace(Regex("[^a-zA-Z ]"), "").trim().lowercase(java.util.Locale.ROOT)
+            val titleClean = title.replace("Channels", "").replace(NON_ALPHA_REGEX, "").trim().lowercase(java.util.Locale.ROOT)
             val chLang = channel.language.trim().lowercase(java.util.Locale.ROOT)
             val chId = channel.id.lowercase(java.util.Locale.ROOT)
 

@@ -113,6 +113,7 @@ object M3uParser {
         val countryCode = detectCountryCode(tvgId, tvgCountry, cleanName)
         val countryName = countryCodeToName(countryCode)
         val language = detectLanguage(tvgLanguage, countryCode, cleanName, tvgId)
+        val finalLogo = resolveFallbackLogo(cleanName, tvgId, logoUrl)
 
         val id = if (!tvgId.isNullOrBlank()) {
             tvgId
@@ -123,7 +124,7 @@ object M3uParser {
         return Channel(
             id = id,
             name = cleanName,
-            logoUrl = logoUrl,
+            logoUrl = finalLogo,
             streamUrl = streamUrl,
             category = category,
             country = countryName,
@@ -298,6 +299,30 @@ object M3uParser {
             "CN", "TW", "HK" -> "Chinese"
             "SA", "AE", "QA", "EG" -> "Arabic"
             else -> "English"
+        }
+    }
+
+    private fun resolveFallbackLogo(name: String, tvgId: String?, existingLogo: String): String {
+        if (existingLogo.isNotBlank()) return existingLogo
+        val n = name.lowercase(Locale.ROOT)
+        val id = (tvgId ?: "").lowercase(Locale.ROOT)
+        return when {
+            n.contains("ptc news") || id.contains("ptcnews") -> "https://upload.wikimedia.org/wikipedia/commons/e/ee/PTC_News_Logo.png"
+            n.contains("ptc punjabi") || id.contains("ptcpunjabi") -> "https://upload.wikimedia.org/wikipedia/commons/9/90/PTC_Punjabi_Logo.png"
+            n.contains("aaj tak") || id.contains("aajtak") -> "https://upload.wikimedia.org/wikipedia/commons/2/28/Aaj_tak_logo.png"
+            n.contains("ndtv") -> "https://upload.wikimedia.org/wikipedia/commons/7/77/NDTV_logo.svg"
+            n.contains("dd news") -> "https://upload.wikimedia.org/wikipedia/commons/3/36/DD_News_Logo.png"
+            n.contains("history") -> "https://upload.wikimedia.org/wikipedia/commons/f/f5/History_Logo.svg"
+            n.contains("espn") -> "https://upload.wikimedia.org/wikipedia/commons/a/a2/ESPN_logo.svg"
+            n.contains("bbc") -> "https://upload.wikimedia.org/wikipedia/commons/4/41/BBC_Logo_2021.svg"
+            n.contains("cnn") -> "https://upload.wikimedia.org/wikipedia/commons/b/b1/CNN.svg"
+            n.contains("red bull") -> "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Red_Bull_TV_logo.svg/300px-Red_Bull_TV_logo.svg.png"
+            n.contains("9x tashan") || n.contains("tashan") -> "https://upload.wikimedia.org/wikipedia/en/3/30/9X_Tashan_Logo.jpg"
+            n.contains("france 24") -> "https://upload.wikimedia.org/wikipedia/en/thumb/6/65/France_24_logo.svg/300px-France_24_logo.svg.png"
+            n.contains("dw") || n.contains("deutsche welle") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Deutsche_Welle_logo.svg/300px-Deutsche_Welle_logo.svg.png"
+            n.contains("al jazeera") -> "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Al_Jazeera_English_logo.svg/300px-Al_Jazeera_English_logo.svg.png"
+            n.contains("bloomberg") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Bloomberg_Television_logo.svg/300px-Bloomberg_Television_logo.svg.png"
+            else -> ""
         }
     }
 }

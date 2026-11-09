@@ -219,15 +219,10 @@ fun MainMobiStreamApp(
                                     bufferMode = uiState.streamBufferMode,
                                     preferredLanguages = uiState.preferredLanguages,
                                     favoriteCategories = uiState.favoriteCategories,
-                                    isGoogleDriveBackupEnabled = uiState.isGoogleDriveBackupEnabled,
-                                    googleDriveLastBackupTime = uiState.googleDriveLastBackupTime,
                                     onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) },
                                     onSetBufferMode = { mode -> viewModel.setStreamBufferMode(mode) },
                                     onSetPreferredLanguages = { viewModel.setPreferredLanguages(it) },
                                     onSetFavoriteCategories = { viewModel.setFavoriteCategories(it) },
-                                    onToggleGoogleDriveBackup = { viewModel.setGoogleDriveBackupEnabled(it) },
-                                    onBackupToDrive = { viewModel.backupToGoogleDrive() },
-                                    onRestoreFromDrive = { viewModel.restoreFromGoogleDrive() },
                                     onExportBackupFile = { exportLauncher.launch("mobistream_backup.json") },
                                     onImportBackupFile = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
                                     onClearCache = { viewModel.loadData(forceRefresh = true) }
@@ -367,10 +362,6 @@ fun MainMobiStreamApp(
                                 Manifest.permission.ACCESS_COARSE_LOCATION
                             )
                         )
-                    },
-                    onRestoreDrive = {
-                        viewModel.restoreFromGoogleDrive()
-                        viewModel.completeOnboarding()
                     },
                     onImportFile = {
                         importLauncher.launch(arrayOf("application/json", "text/*", "*/*"))

@@ -72,7 +72,6 @@ import com.example.ui.theme.TextDarkSecondary
 fun OnboardingModal(
     onDismiss: () -> Unit,
     onRequestPermissions: () -> Unit,
-    onRestoreDrive: () -> Unit,
     onImportFile: () -> Unit,
     onFinish: (selectedLanguages: Set<String>, selectedCategories: Set<String>) -> Unit,
     isDark: Boolean = true
@@ -425,29 +424,14 @@ fun OnboardingModal(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                Row(
+                                OutlinedButton(
+                                    onClick = { onImportFile() },
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    OutlinedButton(
-                                        onClick = { onRestoreDrive() },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Google Drive", fontSize = 11.sp, fontFamily = InterFontFamily, color = primaryText)
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = { onImportFile() },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Icon(Icons.Default.FileOpen, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Import File", fontSize = 11.sp, fontFamily = InterFontFamily, color = primaryText)
-                                    }
+                                    Icon(Icons.Default.FileOpen, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Import Existing Backup (.json)", fontSize = 12.sp, fontFamily = InterFontFamily, color = primaryText)
                                 }
                             }
                         }

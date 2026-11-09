@@ -82,15 +82,10 @@ fun SettingsScreen(
     bufferMode: String,
     preferredLanguages: Set<String> = emptySet(),
     favoriteCategories: Set<String> = emptySet(),
-    isGoogleDriveBackupEnabled: Boolean = false,
-    googleDriveLastBackupTime: Long = 0L,
     onToggleTheme: (Boolean) -> Unit,
     onSetBufferMode: (String) -> Unit,
     onSetPreferredLanguages: (Set<String>) -> Unit = {},
     onSetFavoriteCategories: (Set<String>) -> Unit = {},
-    onToggleGoogleDriveBackup: (Boolean) -> Unit = {},
-    onBackupToDrive: () -> Unit = {},
-    onRestoreFromDrive: () -> Unit = {},
     onExportBackupFile: () -> Unit = {},
     onImportBackupFile: () -> Unit = {},
     onClearCache: () -> Unit,
@@ -460,85 +455,30 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             SettingsCard(cardBg = cardBg, cardBorder = cardBorder) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    // Google Drive Section
+                    // Local On-Device Backup & Restore
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Box(
-                                modifier = Modifier.size(38.dp).clip(CircleShape).background(iconBoxBg),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.CloudUpload, null, tint = if (isDark) GlowLilac else StreamViolet, modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Google Drive Cloud Backup", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = titleTextColor)
-                                Text(
-                                    if (googleDriveLastBackupTime > 0) "Synced: ${java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(googleDriveLastBackupTime))}"
-                                    else "Save favorites & pinned across devices",
-                                    fontFamily = InterFontFamily,
-                                    fontSize = 12.sp,
-                                    color = subtitleTextColor
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = isGoogleDriveBackupEnabled,
-                            onCheckedChange = { onToggleGoogleDriveBackup(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = StreamViolet,
-                                uncheckedThumbColor = Color.White,
-                                uncheckedTrackColor = if (isDark) Color(0xFF281E57) else Color(0xFFCCCCCC)
-                            )
-                        )
-                    }
-
-                    if (isGoogleDriveBackupEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        Box(
+                            modifier = Modifier.size(38.dp).clip(CircleShape).background(iconBoxBg),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Button(
-                                onClick = {
-                                    onBackupToDrive()
-                                    backupStatusMessage = "Backed up to Google Drive!"
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = StreamViolet)
-                            ) {
-                                Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Backup Now", fontFamily = InterFontFamily, fontSize = 12.sp, color = Color.White)
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    onRestoreFromDrive()
-                                    backupStatusMessage = "Restored from Google Drive!"
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp), tint = StreamViolet)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Restore", fontFamily = InterFontFamily, fontSize = 12.sp, color = titleTextColor)
-                            }
+                            Icon(Icons.Default.FileDownload, null, tint = if (isDark) GlowLilac else StreamViolet, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("On-Device Backup (.json)", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = titleTextColor)
+                            Text(
+                                "Export or import your pinned, favorites, and settings securely on your phone.",
+                                fontFamily = InterFontFamily,
+                                fontSize = 12.sp,
+                                color = subtitleTextColor
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Local File Export / Import
-                    Text("Local Backup File (.json)", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = titleTextColor)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("Export or import your channel lists and preferences as a portable JSON file.", fontFamily = InterFontFamily, fontSize = 12.sp, color = subtitleTextColor)
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Spacer(modifier = Modifier.height(10.dp))
 

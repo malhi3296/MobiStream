@@ -542,21 +542,46 @@ fun CountryChannelCard(
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (channel.logoUrl.isNotBlank()) {
+                val resolvedLogo = if (channel.logoUrl.isNotBlank()) {
+                    channel.logoUrl
+                } else {
+                    when {
+                        channel.name.contains("PTC News", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/e/ee/PTC_News_Logo.png"
+                        channel.name.contains("PTC Punjabi", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/9/90/PTC_Punjabi_Logo.png"
+                        channel.name.contains("Aaj Tak", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/2/28/Aaj_tak_logo.png"
+                        channel.name.contains("History", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/f/f5/History_Logo.svg"
+                        channel.name.contains("ESPN", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/a/a2/ESPN_logo.svg"
+                        channel.name.contains("BBC", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/4/41/BBC_Logo_2021.svg"
+                        channel.name.contains("CNN", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/b/b1/CNN.svg"
+                        channel.name.contains("9X", ignoreCase = true) || channel.name.contains("Tashan", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/en/3/30/9X_Tashan_Logo.jpg"
+                        channel.name.contains("Red Bull", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Red_Bull_TV_logo.svg/300px-Red_Bull_TV_logo.svg.png"
+                        else -> ""
+                    }
+                }
+
+                if (resolvedLogo.isNotBlank()) {
                     AsyncImage(
-                        model = channel.logoUrl,
+                        model = resolvedLogo,
                         contentDescription = channel.name,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    Text(
-                        text = channel.name.take(2).uppercase(),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                        color = StreamViolet
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(StreamViolet, Color(0xFF4F2BC4)))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = channel.name.take(2).uppercase(),
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

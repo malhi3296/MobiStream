@@ -39,14 +39,6 @@ class UserPreferencesManager(context: Context) {
         get() = prefs.getStringSet(KEY_FAVORITE_CATEGORIES, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(KEY_FAVORITE_CATEGORIES, value).apply()
 
-    var isGoogleDriveBackupEnabled: Boolean
-        get() = prefs.getBoolean(KEY_DRIVE_BACKUP_ENABLED, false)
-        set(value) = prefs.edit().putBoolean(KEY_DRIVE_BACKUP_ENABLED, value).apply()
-
-    var googleDriveLastBackupTime: Long
-        get() = prefs.getLong(KEY_DRIVE_LAST_BACKUP, 0L)
-        set(value) = prefs.edit().putLong(KEY_DRIVE_LAST_BACKUP, value).apply()
-
     var lastWatchedChannelId: String
         get() = prefs.getString(KEY_LAST_WATCHED_CHANNEL, "") ?: ""
         set(value) = prefs.edit().putString(KEY_LAST_WATCHED_CHANNEL, value).apply()
@@ -60,8 +52,6 @@ class UserPreferencesManager(context: Context) {
         private const val KEY_ONBOARDING_COMPLETED = "key_onboarding_completed"
         private const val KEY_PREFERRED_LANGUAGES = "key_preferred_languages"
         private const val KEY_FAVORITE_CATEGORIES = "key_favorite_categories"
-        private const val KEY_DRIVE_BACKUP_ENABLED = "key_drive_backup_enabled"
-        private const val KEY_DRIVE_LAST_BACKUP = "key_drive_last_backup"
         private const val KEY_LAST_WATCHED_CHANNEL = "key_last_watched_channel"
     }
 }
