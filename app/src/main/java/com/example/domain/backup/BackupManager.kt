@@ -94,4 +94,47 @@ object BackupManager {
             null
         }
     }
+
+    /**
+     * Requirement: Make backup on device automatically once everyday.
+     * Checks if 24 hours have elapsed since the last automatic backup,
+     * and if so, writes an automatic snapshot to mobistream_daily_autobackup.json.
+     */
+    fun performDailyAutoBackupIfDue(
+        context: android.content.Context,
+        favoriteChannelIds: List<String>,
+        pinnedChannelIds: List<String>,
+        preferredLanguages: List<String>,
+        favoriteCategories: List<String>
+    ): Boolean {
+        return try {
+            val prefs = context.getSharedPreferences("mobistream_auto_backup", android.content.Context.MODE_PRIVATE)
+            val lastBackupTime = prefs.getLong("last_auto_backup_timestamp", 0L)
+            val now = System.currentTimeMillis()
+            val oneDayMillis = 24 * 60 * 60 * 1000L
+
+            if (now - lastBackupTime >= oneDayMillis) {
+                val json = createBackupJson(
+                    favoriteChannelIds,
+                    pinnedChannelIds,
+                    preferredLanguages,
+                    favoriteCategories
+                )
+                val backupFile = java.io.File(context.filesDir, "mobistream_daily_autobackup.json")
+                backupFile.writeText(json)
+                prefs.edit().putLong("last_auto_backup_timestamp", now).apply()
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    fun getLastAutoBackupTimestamp(context: android.content.Context): Long {
+        val prefs = context.getSharedPreferences("mobistream_auto_backup", android.content.Context.MODE_PRIVATE)
+        return prefs.getLong("last_auto_backup_timestamp", 0L)
+    }
 }

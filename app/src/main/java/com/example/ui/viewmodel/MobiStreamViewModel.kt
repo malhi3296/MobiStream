@@ -110,7 +110,7 @@ class MobiStreamViewModel(
         _uiState,
         _slideshowTick
     ) { channels, state, tick ->
-        generateSlideshow(channels, state.detectedCountryCode, tick)
+        generateSlideshow(channels, state.detectedCountryCode, state.preferredLanguages.toList(), tick)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -491,6 +491,24 @@ class MobiStreamViewModel(
     }
 
     /**
+     * Requirement: Make backup on device automatically once everyday.
+     */
+    fun triggerDailyAutoBackup(context: android.content.Context) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val favs = repository.favoriteChannels.first().map { it.id }
+            val pinned = repository.pinnedAndFavorites.first().filter { it.isPinned }.map { it.id }
+            val state = _uiState.value
+            com.example.domain.backup.BackupManager.performDailyAutoBackupIfDue(
+                context = context,
+                favoriteChannelIds = favs,
+                pinnedChannelIds = pinned,
+                preferredLanguages = state.preferredLanguages.toList(),
+                favoriteCategories = state.favoriteCategories.toList()
+            )
+        }
+    }
+
+    /**
      * Requirement 3:
      * "On home page slider , show most viewed channels (TrP) in user country in each categories with currently running program with image of that show at title. Make news first slider item"
      */
@@ -559,16 +577,28 @@ class MobiStreamViewModel(
      * it would be changed every 15 minutes even if app is not closed.
      * Make news first slider item."
      */
-    private fun generateSlideshow(channels: List<Channel>, countryCode: String, tick: Int = 0): List<SlideShowItem> {
+    private fun generateSlideshow(
+        channels: List<Channel>,
+        countryCode: String,
+        preferredLanguages: List<String> = emptyList(),
+        tick: Int = 0
+    ): List<SlideShowItem> {
         if (channels.isEmpty()) return emptyList()
 
+        // Requirement 5: "only show english + user choosen language channels in slider ."
+        val allowedLangs = (preferredLanguages + "English").map { it.lowercase() }.toSet()
+        val languageFiltered = channels.filter { ch ->
+            val chLang = ch.language.lowercase()
+            chLang.isBlank() || allowedLangs.any { allowed -> chLang.contains(allowed) || allowed.contains(chLang) }
+        }.ifEmpty { channels }
+
         val isIndia = countryCode.equals("IN", ignoreCase = true)
-        val countryChannels = channels.filter {
+        val countryChannels = languageFiltered.filter {
             it.countryCode.equals(countryCode, ignoreCase = true) ||
                     (isIndia && (it.countryCode == "IN" || it.country.contains("India", ignoreCase = true)))
         }
 
-        val pool = if (countryChannels.isNotEmpty()) countryChannels else channels
+        val pool = if (countryChannels.isNotEmpty()) countryChannels else languageFiltered
         val slides = mutableListOf<SlideShowItem>()
 
         // 1. NEWS CHANNEL (STRICTLY FIRST SLIDE - rotated among top news networks every 15 min tick)

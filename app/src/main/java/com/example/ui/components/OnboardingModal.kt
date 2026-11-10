@@ -67,6 +67,9 @@ import com.example.ui.theme.StreamViolet
 import com.example.ui.theme.TextDarkPrimary
 import com.example.ui.theme.TextDarkSecondary
 
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Brightness7
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingModal(
@@ -74,9 +77,10 @@ fun OnboardingModal(
     onRequestPermissions: () -> Unit,
     onImportFile: () -> Unit,
     onFinish: (selectedLanguages: Set<String>, selectedCategories: Set<String>) -> Unit,
-    isDark: Boolean = true
+    isDark: Boolean = true,
+    onToggleTheme: (Boolean) -> Unit = {}
 ) {
-    // Step 1: Languages, Step 2: Categories, Step 3: Permissions & Restore
+    // Step 1: Theme (Dark/Light), Step 2: Languages, Step 3: Categories, Step 4: Permissions & Restore
     var step by remember { mutableIntStateOf(1) }
     var selectedLangs by remember { mutableStateOf(setOf("Punjabi", "English", "Hindi")) }
     var selectedCats by remember { mutableStateOf(setOf("News", "Sports", "Movies", "Music")) }
@@ -106,8 +110,8 @@ fun OnboardingModal(
         "Business", "Lifestyle", "Science", "Travel", "Cooking", "Weather"
     )
 
-    val surfaceBg = if (isDark) Color(0xFF130E2E) else Color(0xFFFFFFFF)
-    val cardBg = if (isDark) Color(0xFF1C1542) else Color(0xFFF3F4F9)
+    val surfaceBg = if (isDark) Color(0xFF3F3F46) else Color(0xFFD4D4D8)
+    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
     val primaryText = if (isDark) Color.White else TextDarkPrimary
     val secondaryText = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
 
@@ -138,17 +142,17 @@ fun OnboardingModal(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Top Step Progress Indicator
+                // Top Step Progress Indicator (4 Steps)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    for (i in 1..3) {
+                    for (i in 1..4) {
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 4.dp)
                                 .height(5.dp)
-                                .width(if (step == i) 32.dp else 12.dp)
+                                .width(if (step == i) 28.dp else 10.dp)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(if (step >= i) StreamViolet else Color(0x33A19BD0))
                         )
@@ -159,6 +163,173 @@ fun OnboardingModal(
 
                 when (step) {
                     1 -> {
+                        // Step 1: Choose Dark Mode or Light Mode
+                        Text(
+                            text = "Choose App Appearance",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            color = primaryText,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Text(
+                            text = "Select your preferred theme for streaming live television.",
+                            fontFamily = InterFontFamily,
+                            fontSize = 13.sp,
+                            color = secondaryText,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
+                        )
+
+                        // Dark Mode Option Card
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(
+                                    width = if (isDark) 2.dp else 1.dp,
+                                    color = if (isDark) StreamViolet else (if (isDark) Color(0xFF2C2266) else Color(0xFFDCDFEA)),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable { onToggleTheme(true) },
+                            color = if (isDark) Color(0xFF1E1748) else Color(0xFFF5F4FA)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isDark) StreamViolet else Color(0xFFE2E4F0)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Brightness4,
+                                        contentDescription = "Dark Mode",
+                                        tint = if (isDark) Color.White else Color(0xFF555070),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Dark Mode (Recommended)",
+                                            fontFamily = InterFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = primaryText
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Midnight purple styling optimized for low-light streaming",
+                                        fontFamily = InterFontFamily,
+                                        fontSize = 12.sp,
+                                        color = secondaryText
+                                    )
+                                }
+                                if (isDark) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = StreamViolet,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Light Mode Option Card
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(
+                                    width = if (!isDark) 2.dp else 1.dp,
+                                    color = if (!isDark) StreamViolet else (if (isDark) Color(0xFF2C2266) else Color(0xFFDCDFEA)),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable { onToggleTheme(false) },
+                            color = if (!isDark) Color(0xFFEDE9FE) else cardBg
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(if (!isDark) StreamViolet else Color(0xFF282052)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Brightness7,
+                                        contentDescription = "Light Mode",
+                                        tint = if (!isDark) Color.White else Color(0xFFA19BD0),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Light Mode",
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = primaryText
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "High-contrast clean and crisp daytime interface",
+                                        fontFamily = InterFontFamily,
+                                        fontSize = 12.sp,
+                                        color = secondaryText
+                                    )
+                                }
+                                if (!isDark) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = StreamViolet,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(30.dp))
+
+                        Button(
+                            onClick = { step = 2 },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .testTag("onboarding_next_step_0"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = StreamViolet)
+                        ) {
+                            Text(
+                                text = "Next: Choose Languages",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    2 -> {
                         // Step 1: Select Preferred Languages (Up to 5)
                         Text(
                             text = "Choose Preferred Languages",
@@ -229,7 +400,7 @@ fun OnboardingModal(
                         Spacer(modifier = Modifier.height(28.dp))
 
                         Button(
-                            onClick = { step = 2 },
+                            onClick = { step = 3 },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp)
@@ -247,8 +418,8 @@ fun OnboardingModal(
                         }
                     }
 
-                    2 -> {
-                        // Step 2: Select Favorite Categories
+                    3 -> {
+                        // Step 3: Select Favorite Categories
                         Text(
                             text = "What do you love watching?",
                             fontFamily = InterFontFamily,
@@ -318,7 +489,7 @@ fun OnboardingModal(
                         Spacer(modifier = Modifier.height(28.dp))
 
                         Button(
-                            onClick = { step = 3 },
+                            onClick = { step = 4 },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp)
@@ -336,8 +507,8 @@ fun OnboardingModal(
                         }
                     }
 
-                    3 -> {
-                        // Step 3: Permissions & Existing Backup Check
+                    4 -> {
+                        // Step 4: Permissions & Existing Backup Check
                         Text(
                             text = "Ready to Stream",
                             fontFamily = InterFontFamily,

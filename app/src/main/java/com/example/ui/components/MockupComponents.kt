@@ -8,6 +8,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,7 +79,7 @@ fun MobiStreamHomeHeader(
     onFilterClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     Row(
         modifier = modifier
@@ -163,180 +165,203 @@ fun DynamicHeroSlideshow(
 ) {
     if (slides.isEmpty()) return
 
-    var currentSlideIndex by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { slides.size })
+    val cardShape = RoundedCornerShape(26.dp)
 
-    // Auto rotate slides every 5 seconds
-    LaunchedEffect(slides.size) {
+    // Auto rotate slides every 6 seconds when user is not manually sliding with thumb
+    LaunchedEffect(pagerState, slides.size) {
         while (true) {
-            delay(5000)
-            if (slides.isNotEmpty()) {
-                currentSlideIndex = (currentSlideIndex + 1) % slides.size
+            delay(6000)
+            if (!pagerState.isScrollInProgress && slides.isNotEmpty()) {
+                val next = (pagerState.currentPage + 1) % slides.size
+                pagerState.animateScrollToPage(next)
             }
         }
     }
 
-    val currentSlide = slides[currentSlideIndex.coerceIn(0, slides.size - 1)]
-    val cardShape = RoundedCornerShape(26.dp)
-
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .padding(vertical = 6.dp)
     ) {
-        Box(
+        // Requirement 4: Option to slide photos in slider with thumb via HorizontalPager
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(210.dp)
-                .clip(cardShape)
-                .clickable { onSlideClick(currentSlide.channel) }
-                .testTag("hero_slideshow_card")
-        ) {
-            AnimatedContent(
-                targetState = currentSlide,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "slideAnimation",
-                modifier = Modifier.fillMaxSize()
-            ) { slide ->
+                .padding(horizontal = 20.dp)
+        ) { page ->
+            val slide = slides[page]
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(cardShape)
+                    .clickable { onSlideClick(slide.channel) }
+                    .testTag("hero_slideshow_card_$page")
+            ) {
+                // Background Base
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(slide.bgGradient)
+                )
+
+                // High-resolution authentic photo backdrop
+                if (slide.showImageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = slide.showImageUrl,
+                        contentDescription = slide.programTitle,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // If no show photo or alongside it, display channel logo
+                if (slide.showImageUrl.isBlank() && slide.channel.logoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = slide.channel.logoUrl,
+                        contentDescription = slide.channel.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(36.dp)
+                    )
+                }
+
+                // Deep gradient scrim overlay so all texts are crisp and readable
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0x66000000),
+                                    Color(0x33000000),
+                                    Color(0xF20E0A24)
+                                )
+                            )
+                        )
+                )
+
+                // Top Left Tag Badge (BREAKING NEWS, LIVE SPORTS, etc.)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(slide.tagColor)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    // Show image backdrop or channel logo
+                    Text(
+                        text = slide.tagText,
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        color = Color.White,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+
+                // Currently running program with show image thumbnail at bottom left
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(18.dp)
+                        .fillMaxWidth(0.78f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (slide.showImageUrl.isNotBlank()) {
                         AsyncImage(
                             model = slide.showImageUrl,
-                            contentDescription = null,
+                            contentDescription = slide.programTitle,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .fillMaxSize()
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
                     } else if (slide.channel.logoUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = slide.channel.logoUrl,
-                            contentDescription = slide.channel.name,
-                            contentScale = ContentScale.Fit,
+                        Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(36.dp)
-                        )
-                    }
-
-                    // Scrim overlay for readability
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color(0x66000000), Color(0xDD0E0A24))
-                                )
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF3F3F46))
+                                .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = slide.channel.logoUrl,
+                                contentDescription = slide.channel.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
                             )
-                    )
-
-                    // Tag on Top Left
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(16.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(slide.tagColor)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = slide.tagText,
+                            text = slide.programTitle,
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
+                            fontSize = 17.sp,
                             color = Color.White,
-                            letterSpacing = 0.5.sp
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = slide.programSubtitle,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.5.sp,
+                            color = GlowLilac,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    // Requirement 3: Currently running program with image of that show at title
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(18.dp)
-                            .fillMaxWidth(0.78f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (slide.showImageUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = slide.showImageUrl,
-                                contentDescription = slide.programTitle,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = slide.programTitle,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = slide.programSubtitle,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 11.5.sp,
-                                color = Color(0xFFE2E2E2),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
                 }
-            }
 
-            // Circular Play Button docked at Bottom Right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .size(52.dp)
-                    .shadow(8.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFF19191B))
-                    .clickable { onSlideClick(currentSlide.channel) }
-                    .testTag("slideshow_play_button"),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play Now",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                // Circular Play Button docked at Bottom Right
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .size(50.dp)
+                        .shadow(8.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(StreamViolet),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play Now",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // 5 Dot Pagination Indicators
+        // Thumb Pagination Indicator Pills showing slide position
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             slides.indices.forEach { index ->
-                val isSelected = index == currentSlideIndex
+                val isSelected = index == pagerState.currentPage
                 Box(
                     modifier = Modifier
-                        .clickable { currentSlideIndex = index }
                         .padding(horizontal = 3.dp)
-                        .size(width = if (isSelected) 18.dp else 6.dp, height = 5.dp)
+                        .size(width = if (isSelected) 22.dp else 6.dp, height = 5.dp)
                         .clip(RoundedCornerShape(3.dp))
                         .background(
-                            if (isSelected) StreamViolet else Color(0xFFD4D4DE)
+                            if (isSelected) StreamViolet else Color.White.copy(alpha = 0.3f)
                         )
                 )
             }
@@ -356,7 +381,7 @@ fun PinnedAndFavCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     val cardShape = RoundedCornerShape(14.dp)
 
     Column(
@@ -498,7 +523,7 @@ fun CountryChannelCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     val cardShape = RoundedCornerShape(16.dp)
 
     val cardGradient = Brush.verticalGradient(
@@ -689,7 +714,7 @@ fun SectionHeader(
     onSeeAllClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     Row(
         modifier = modifier
@@ -730,7 +755,7 @@ fun TrendingStreamItem(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     Row(
         modifier = modifier
@@ -815,7 +840,7 @@ fun GenreGlowingBubble(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     Column(
         modifier = modifier

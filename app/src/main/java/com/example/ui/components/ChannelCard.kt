@@ -63,7 +63,7 @@ fun ChannelCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     val cardShape = RoundedCornerShape(16.dp)
 
     // Gradient background matching the screenshot (dark slate/metallic fading to deep midnight)

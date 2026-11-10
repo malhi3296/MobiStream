@@ -32,6 +32,7 @@ import com.example.ui.screens.explore.ExploreScreen
 import com.example.ui.screens.favorites.FavoritesScreen
 import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.player.PlayerScreen
+import com.example.ui.screens.profile.ProfileScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.splash.SplashScreen
 import com.example.ui.theme.MobiStreamTheme
@@ -120,6 +121,7 @@ fun MainMobiStreamApp(
     }
 
     LaunchedEffect(Unit) {
+        viewModel.triggerDailyAutoBackup(context)
         if (!uiState.hasAskedLocationPermission && uiState.hasCompletedOnboarding) {
             permissionLauncher.launch(
                 arrayOf(
@@ -195,14 +197,10 @@ fun MainMobiStreamApp(
                             MobiStreamBottomNav(
                                 currentDestination = currentDestination,
                                 onNavigate = { destination ->
-                                    if (destination == NavDestination.PROFILE) {
-                                        showUserInfoModal = true
-                                    } else {
-                                        if (screenState == ScreenState.SETTINGS_OVERLAY) {
-                                            screenState = ScreenState.MAIN
-                                        }
-                                        currentDestination = destination
+                                    if (screenState == ScreenState.SETTINGS_OVERLAY) {
+                                        screenState = ScreenState.MAIN
                                     }
+                                    currentDestination = destination
                                 }
                             )
                         },
@@ -316,8 +314,14 @@ fun MainMobiStreamApp(
                                         }
 
                                         NavDestination.PROFILE -> {
-                                            currentDestination = NavDestination.HOME
-                                            showUserInfoModal = true
+                                            ProfileScreen(
+                                                totalChannelsCount = allChannels.size,
+                                                favoriteChannelsCount = favoriteChannels.size,
+                                                pinnedChannelsCount = pinnedAndFavorites.count { it.isPinned },
+                                                onBack = { currentDestination = NavDestination.HOME },
+                                                onExportBackup = { exportLauncher.launch("mobistream_backup.json") },
+                                                onImportBackup = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) }
+                                            )
                                         }
                                     }
                                 }
@@ -372,7 +376,8 @@ fun MainMobiStreamApp(
                         viewModel.setFavoriteCategories(cats)
                         viewModel.completeOnboarding()
                     },
-                    isDark = uiState.isDarkMode
+                    isDark = uiState.isDarkMode,
+                    onToggleTheme = { isDark -> viewModel.toggleTheme(isDark) }
                 )
             }
         }

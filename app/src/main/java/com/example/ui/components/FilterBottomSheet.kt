@@ -74,9 +74,8 @@ fun FilterBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isDark = MaterialTheme.colorScheme.background != Color.White
-
-    val containerBg = if (isDark) MidnightBackground else Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
+    val containerBg = if (isDark) Color(0xFF3F3F46) else Color(0xFFD4D4D8)
     val titleTextColor = if (isDark) TextWhite else TextDarkPrimary
     val sectionHeaderColor = if (isDark) GlowLilac else StreamViolet
     val closeIconTint = if (isDark) TextMuted else TextDarkSecondary

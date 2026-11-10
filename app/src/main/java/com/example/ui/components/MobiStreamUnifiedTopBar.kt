@@ -56,7 +56,7 @@ fun MobiStreamUnifiedTopBar(
     hasActiveFilters: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = isDarkMode
     // High-contrast icon colors for dark and light mode
     val defaultIconTint = if (isDark) Color.White else TextDarkPrimary
     val brandTextColor = if (isDark) Color.White else TextDarkPrimary
@@ -74,24 +74,11 @@ fun MobiStreamUnifiedTopBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.testTag("unified_topbar_brand")
         ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isDark) Color(0xFF221A44) else Color(0xFFE8E5F7))
-                    .border(
-                        width = 1.dp,
-                        color = if (isDark) Color(0xFF382E66) else Color(0xFFD6D1EE),
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_mobistream_symbol),
-                    contentDescription = "MobiStream Logo",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            Image(
+                painter = painterResource(id = R.drawable.ic_mobistream_symbol),
+                contentDescription = "MobiStream Logo",
+                modifier = Modifier.size(30.dp)
+            )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "MOBISTREAM",

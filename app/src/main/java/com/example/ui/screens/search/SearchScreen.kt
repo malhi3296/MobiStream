@@ -55,7 +55,7 @@ fun SearchScreen(
     onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     Box(
         modifier = modifier

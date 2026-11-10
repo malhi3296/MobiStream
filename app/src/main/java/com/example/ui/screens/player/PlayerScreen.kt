@@ -1003,6 +1003,37 @@ private fun PlayerControlsOverlay(
                     Spacer(modifier = Modifier.width(10.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Closed Captions (CC) toggle if stream comes with subtitles / closed captions
+                        if (hasClosedCaptions) {
+                            IconButton(
+                                onClick = onToggleClosedCaptions,
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .testTag("player_cc_button")
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(if (isClosedCaptionsEnabled) StreamViolet else Color.White.copy(alpha = 0.12f))
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isClosedCaptionsEnabled) StreamViolet else Color.White.copy(alpha = 0.45f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "CC",
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 10.sp,
+                                        color = if (isClosedCaptionsEnabled) Color.White else Color.White.copy(alpha = 0.65f)
+                                    )
+                                }
+                            }
+                        }
+
                         // Requirement 6: Favorite button added BEFORE audio on bottom right
                         IconButton(onClick = onToggleFavorite) {
                             Icon(

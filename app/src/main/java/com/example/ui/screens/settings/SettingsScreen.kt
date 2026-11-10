@@ -97,7 +97,7 @@ fun SettingsScreen(
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showCategoryPicker by remember { mutableStateOf(false) }
 
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     val titleTextColor = if (isDark) TextWhite else TextDarkPrimary
     val subtitleTextColor = if (isDark) TextMuted else TextDarkSecondary
     val cardBg = if (isDark) MidnightCard else Color(0xFFF6F7FC)

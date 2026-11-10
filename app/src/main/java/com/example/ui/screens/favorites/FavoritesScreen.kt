@@ -20,7 +20,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,7 +65,7 @@ fun FavoritesScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedCategoryFilter by remember { mutableStateOf("All") }
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     val primaryTextColor = if (isDark) TextWhite else TextDarkPrimary
     val secondaryTextColor = if (isDark) TextMuted else TextDarkSecondary
@@ -207,33 +210,106 @@ fun FavoritesScreen(
                     }
                 }
             } else {
-                // Filter by category if user has multiple categories in favorites
-                if (categories.size > 2) {
+                // Requirement: Make multiple folders of fav channels according to categories
+                val categoryCounts = remember(favoriteChannels) {
+                    favoriteChannels.groupingBy { it.category }.eachCount()
+                }
+
+                Column(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                    Text(
+                        text = "Category Folders",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = secondaryTextColor,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         items(categories) { categoryName ->
                             val isSelected = selectedCategoryFilter == categoryName
-                            val shape = RoundedCornerShape(12.dp)
+                            val shape = RoundedCornerShape(14.dp)
+                            val count = if (categoryName == "All") favoriteChannels.size else (categoryCounts[categoryName] ?: 0)
+
                             Surface(
                                 shape = shape,
                                 color = if (isSelected) StreamViolet else cardBg,
                                 modifier = Modifier
                                     .clip(shape)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) StreamViolet else (if (isDark) Color(0xFF2C2266) else Color(0xFFDCDFEA)),
+                                        shape = shape
+                                    )
                                     .clickable { selectedCategoryFilter = categoryName }
                             ) {
-                                Text(
-                                    text = categoryName,
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    fontSize = 12.sp,
-                                    color = if (isSelected) Color.White else secondaryTextColor,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSelected) Icons.Default.FolderOpen else Icons.Default.Folder,
+                                        contentDescription = null,
+                                        tint = if (isSelected) Color.White else StreamViolet,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = categoryName,
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 13.sp,
+                                        color = if (isSelected) Color.White else primaryTextColor
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color.White.copy(alpha = 0.25f) else (if (isDark) Color(0xFF281E52) else Color(0xFFE2E4F0)))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "$count",
+                                            fontFamily = InterFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            color = if (isSelected) Color.White else secondaryTextColor
+                                        )
+                                    }
+                                }
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Active Folder Banner
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (selectedCategoryFilter == "All") "📁 All Favorites Folder (${displayedChannels.size})" else "📁 $selectedCategoryFilter Folder (${displayedChannels.size} channels)",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.5.sp,
+                            color = primaryTextColor
+                        )
+                        if (selectedCategoryFilter != "All") {
+                            Text(
+                                text = "Show All",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.5.sp,
+                                color = StreamViolet,
+                                modifier = Modifier
+                                    .clickable { selectedCategoryFilter = "All" }
+                                    .padding(4.dp)
+                            )
                         }
                     }
                 }

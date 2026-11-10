@@ -121,7 +121,7 @@ fun ExploreScreen(
     lastWatchedChannelId: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     var subView by remember { mutableStateOf(ExploreSubView.NONE) }
     var subViewSearch by remember { mutableStateOf("") }
 

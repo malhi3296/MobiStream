@@ -72,7 +72,7 @@ fun UserInfoModal(
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
     val upiId = "8288909927@airtel"
     val developerName = "Arwinder Singh"
