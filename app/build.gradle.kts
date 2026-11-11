@@ -16,8 +16,8 @@ android {
     applicationId = "com.malhi3296.mobistream"
     minSdk = 24
     targetSdk = 36
-    versionCode = 5
-    versionName = "1.0.4"
+    versionCode = 6
+    versionName = "1.0.5"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -101,8 +101,9 @@ dependencies {
   implementation(libs.androidx.media3.exoplayer.hls)
   implementation(libs.androidx.media3.ui)
 
-  // Coil for async channel logo loading
+  // Coil for async channel logo loading (with SVG decoder support)
   implementation(libs.coil.compose)
+  implementation(libs.coil.svg)
 
   // Room Database for favorites and cached channels
   implementation(libs.androidx.room.ktx)

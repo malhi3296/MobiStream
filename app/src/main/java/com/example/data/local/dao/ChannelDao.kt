@@ -19,6 +19,12 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE isFeatured = 1")
     fun getFeaturedChannels(): Flow<List<ChannelEntity>>
 
+    @Query("SELECT * FROM channels WHERE id IN (SELECT channelId FROM favorites) ORDER BY name ASC")
+    fun getFavoriteChannels(): Flow<List<ChannelEntity>>
+
+    @Query("SELECT * FROM channels WHERE id IN (SELECT channelId FROM pinned_channels) ORDER BY name ASC")
+    fun getPinnedChannels(): Flow<List<ChannelEntity>>
+
     @Query("SELECT * FROM channels WHERE name LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%'")
     fun searchChannels(query: String): Flow<List<ChannelEntity>>
 

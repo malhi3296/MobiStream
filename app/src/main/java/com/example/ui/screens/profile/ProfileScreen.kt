@@ -534,7 +534,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Version 1.0.4 (Build 104) • Streaming made mobile.",
+                        text = "Version 1.0.5 (Build 105) • Streaming made mobile.",
                         fontFamily = InterFontFamily,
                         fontSize = 11.5.sp,
                         color = StreamViolet,

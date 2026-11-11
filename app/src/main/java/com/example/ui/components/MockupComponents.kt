@@ -384,6 +384,9 @@ fun PinnedAndFavCard(
     val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     val cardShape = RoundedCornerShape(14.dp)
 
+    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
+    val subtleShadowBorder = if (channel.isPinned) Color(0xFFFFB300) else if (isDark) Color(0x2EFFFFFF) else Color(0x1F000000)
+
     Column(
         modifier = modifier
             .width(115.dp)
@@ -395,13 +398,19 @@ fun PinnedAndFavCard(
             modifier = Modifier
                 .width(115.dp)
                 .height(85.dp)
-                .clip(cardShape)
-                .background(if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F9))
+                .shadow(
+                    elevation = 2.dp,
+                    shape = cardShape,
+                    spotColor = if (isDark) Color(0x66000000) else Color(0x24000000),
+                    ambientColor = if (isDark) Color(0x40000000) else Color(0x14000000)
+                )
                 .border(
                     width = 1.dp,
-                    color = if (channel.isPinned) Color(0xFFFFB300) else if (isDark) Color(0xFF2C2266) else Color(0xFFE4E4EE),
+                    color = subtleShadowBorder,
                     shape = cardShape
                 )
+                .clip(cardShape)
+                .background(cardBg)
         ) {
             if (channel.logoUrl.isNotBlank()) {
                 AsyncImage(
@@ -514,7 +523,11 @@ fun PinnedAndFavCard(
 }
 
 /**
- * Localized Country Channel Card matching screenshot format (ICON_0f5a79ef.png)
+ * Localized Country Channel Card:
+ * - Transparent logo tile background with NO overlay gradient
+ * - Really subtle dropshadow as border
+ * - Dark text in light mode, light text in dark mode
+ * - Clean adaptive surface matching #D4D4D8 (light) and #3F3F46 (dark)
  */
 @Composable
 fun CountryChannelCard(
@@ -526,27 +539,26 @@ fun CountryChannelCard(
     val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
     val cardShape = RoundedCornerShape(16.dp)
 
-    val cardGradient = Brush.verticalGradient(
-        colors = listOf(
-            if (isDark) Color(0xFF2C2746) else Color(0xFFECEEF8),
-            if (isDark) Color(0xFF18142A) else Color(0xFFDFE2F2),
-            if (isDark) Color(0xFF0C0918) else Color(0xFFD3D7EB)
-        )
-    )
-
-    val borderColor = if (isDark) Color(0xFF383256) else Color(0xFFD4D8EC)
+    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
+    val subtleShadowBorder = if (isDark) Color(0x2EFFFFFF) else Color(0x1F000000)
 
     Box(
         modifier = modifier
             .width(150.dp)
             .height(165.dp)
+            .shadow(
+                elevation = 2.dp,
+                shape = cardShape,
+                spotColor = if (isDark) Color(0x66000000) else Color(0x24000000),
+                ambientColor = if (isDark) Color(0x40000000) else Color(0x14000000)
+            )
+            .border(width = 1.dp, color = subtleShadowBorder, shape = cardShape)
             .clip(cardShape)
-            .border(1.dp, borderColor, cardShape)
-            .background(cardGradient)
+            .background(cardBg)
             .clickable { onPlayClick() }
             .testTag("country_channel_card_${channel.id}")
     ) {
-        // Logo in Center Upper with adaptive contrast surface
+        // Logo in Center Upper: Transparent background with NO white box and NO gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -554,59 +566,49 @@ fun CountryChannelCard(
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isDark) Color(0xFF221A44) else Color(0xFFFFFFFF))
-                    .border(
-                        width = 1.dp,
-                        color = if (isDark) Color(0xFF352B66) else Color(0xFFE2E4EE),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val resolvedLogo = if (channel.logoUrl.isNotBlank()) {
-                    channel.logoUrl
-                } else {
-                    when {
-                        channel.name.contains("PTC News", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/e/ee/PTC_News_Logo.png"
-                        channel.name.contains("PTC Punjabi", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/9/90/PTC_Punjabi_Logo.png"
-                        channel.name.contains("Aaj Tak", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/2/28/Aaj_tak_logo.png"
-                        channel.name.contains("History", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/f/f5/History_Logo.svg"
-                        channel.name.contains("ESPN", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/a/a2/ESPN_logo.svg"
-                        channel.name.contains("BBC", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/4/41/BBC_Logo_2021.svg"
-                        channel.name.contains("CNN", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/commons/b/b1/CNN.svg"
-                        channel.name.contains("9X", ignoreCase = true) || channel.name.contains("Tashan", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/en/3/30/9X_Tashan_Logo.jpg"
-                        channel.name.contains("Red Bull", ignoreCase = true) -> "https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Red_Bull_TV_logo.svg/300px-Red_Bull_TV_logo.svg.png"
-                        else -> ""
-                    }
-                }
+            val resolvedLogo = com.example.domain.ChannelLogoResolver.resolve(channel.name, channel.logoUrl)
 
-                if (resolvedLogo.isNotBlank()) {
-                    AsyncImage(
-                        model = resolvedLogo,
-                        contentDescription = channel.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(StreamViolet, Color(0xFF4F2BC4)))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = channel.name.take(2).uppercase(),
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color.White
-                        )
+            if (resolvedLogo.isNotBlank()) {
+                coil.compose.SubcomposeAsyncImage(
+                    model = resolvedLogo,
+                    contentDescription = channel.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                    error = {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(StreamViolet.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = channel.name.take(2).uppercase(),
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
+                                color = StreamViolet
+                            )
+                        }
                     }
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(StreamViolet.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = channel.name.take(2).uppercase(),
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = StreamViolet
+                    )
                 }
             }
         }
@@ -618,88 +620,80 @@ fun CountryChannelCard(
                 .align(Alignment.TopEnd)
                 .padding(6.dp)
                 .size(30.dp)
-                .background(Color(0x660E0A24), CircleShape)
+                .background(
+                    if (isDark) Color(0x4D000000) else Color(0x14000000),
+                    CircleShape
+                )
         ) {
             Icon(
                 imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                 contentDescription = "Favorite",
-                tint = if (channel.isFavorite) LiveRed else Color.White,
+                tint = if (channel.isFavorite) LiveRed else if (isDark) Color.White.copy(alpha = 0.85f) else TextDarkSecondary,
                 modifier = Modifier.size(16.dp)
             )
         }
 
-        // Bottom overlay with channel info, category pill, and flag + uppercase country
-        Box(
+        // Bottom Info: Clean transparent container with NO overlay gradient
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color(0xCC000000),
-                            Color(0xF2070512)
-                        )
-                    )
-                )
                 .padding(horizontal = 9.dp, vertical = 7.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = channel.name,
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = if (isDark) Color.White else TextDarkPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(StreamViolet.copy(alpha = 0.15f))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = channel.name,
+                        text = channel.category,
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(Color(0xFFE4D6FF))
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = channel.category,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp,
-                            color = Color(0xFF5322B8)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = getCountryFlag(channel.countryCode),
-                        fontSize = 10.sp
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = channel.country.uppercase(),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
                         fontSize = 9.sp,
-                        color = Color(0xFFD6D3E8),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = if (isDark) GlowLilac else Color(0xFF6D28D9)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = getCountryFlag(channel.countryCode),
+                    fontSize = 10.sp
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = channel.country.uppercase(),
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 9.sp,
+                    color = if (isDark) Color(0xFFA1A1AA) else TextDarkSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

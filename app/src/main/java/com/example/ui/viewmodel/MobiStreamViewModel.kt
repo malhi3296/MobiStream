@@ -344,9 +344,7 @@ class MobiStreamViewModel(
 
             try {
                 repository.initializeChannels(forceRefresh = forceRefresh)
-                val categories = repository.getAvailableCategories()
-                val countries = repository.getAvailableCountries()
-                val languages = repository.getAvailableLanguages()
+                val (categories, countries, languages) = repository.getFilterMetadata()
 
                 _uiState.update {
                     it.copy(

@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -141,6 +143,8 @@ fun PlayerScreen(
         )
     }
     var isClosedCaptionsEnabled by remember { mutableStateOf(true) }
+    var isLocked by remember { mutableStateOf(false) }
+    var showLockedNotice by remember { mutableStateOf(false) }
 
     // Gesture control states (Requirement 1)
     var playerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -262,6 +266,14 @@ fun PlayerScreen(
         }
     }
 
+    // Auto-hide locked screen notice
+    LaunchedEffect(showLockedNotice) {
+        if (showLockedNotice) {
+            delay(3500)
+            showLockedNotice = false
+        }
+    }
+
     val onToggleClosedCaptions = {
         val next = !isClosedCaptionsEnabled
         isClosedCaptionsEnabled = next
@@ -272,7 +284,11 @@ fun PlayerScreen(
     }
 
     BackHandler {
-        handleExitPlayer()
+        if (isLocked) {
+            showLockedNotice = true
+        } else {
+            handleExitPlayer()
+        }
     }
 
     Box(
@@ -287,9 +303,16 @@ fun PlayerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .onSizeChanged { playerSize = it }
-                    .clickable { showControls = !showControls }
+                    .clickable {
+                        if (isLocked) {
+                            showLockedNotice = !showLockedNotice
+                        } else {
+                            showControls = !showControls
+                        }
+                    }
                     // Requirement 1: On-screen vertical drag gestures for Brightness (Left) and Volume (Right)
-                    .pointerInput(playerSize) {
+                    .pointerInput(playerSize, isLocked) {
+                        if (isLocked) return@pointerInput
                         detectVerticalDragGestures(
                             onDragStart = { offset ->
                                 val midX = if (playerSize.width > 0) playerSize.width / 2 else 500
@@ -444,6 +467,12 @@ fun PlayerScreen(
                     },
                     onToggleFavorite = { onToggleFavorite(channel.id) },
                     onToggleClosedCaptions = onToggleClosedCaptions,
+                    isLocked = isLocked,
+                    onToggleLock = {
+                        isLocked = true
+                        showControls = false
+                        showLockedNotice = true
+                    },
                     onRetry = {
                         streamError = null
                         isBuffering = true
@@ -451,6 +480,48 @@ fun PlayerScreen(
                         exoPlayer.play()
                     }
                 )
+
+                // Floating Unlock Badge when locked
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isLocked && showLockedNotice,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = 28.dp, start = 28.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xEE0E0A24))
+                            .border(1.dp, StreamViolet, RoundedCornerShape(24.dp))
+                            .clickable {
+                                isLocked = false
+                                showControls = true
+                                showLockedNotice = false
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .testTag("player_unlock_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Unlock controls",
+                                tint = GlowLilac,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Screen Locked • Tap to Unlock",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
             }
         } else {
             // Portrait Mode with Details below
@@ -466,7 +537,13 @@ fun PlayerScreen(
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                         .background(Color.Black)
-                        .clickable { showControls = !showControls }
+                        .clickable {
+                            if (isLocked) {
+                                showLockedNotice = !showLockedNotice
+                            } else {
+                                showControls = !showControls
+                            }
+                        }
                 ) {
                     AndroidView(
                         factory = { ctx ->
@@ -519,6 +596,12 @@ fun PlayerScreen(
                         },
                         onToggleFavorite = { onToggleFavorite(channel.id) },
                         onToggleClosedCaptions = onToggleClosedCaptions,
+                        isLocked = isLocked,
+                        onToggleLock = {
+                            isLocked = true
+                            showControls = false
+                            showLockedNotice = true
+                        },
                         onRetry = {
                             streamError = null
                             isBuffering = true
@@ -526,6 +609,48 @@ fun PlayerScreen(
                             exoPlayer.play()
                         }
                     )
+
+                    // Floating Unlock Badge in Portrait
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isLocked && showLockedNotice,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color(0xEE0E0A24))
+                                .border(1.dp, StreamViolet, RoundedCornerShape(20.dp))
+                                .clickable {
+                                    isLocked = false
+                                    showControls = true
+                                    showLockedNotice = false
+                                }
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                                .testTag("player_unlock_button_portrait"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Unlock controls",
+                                    tint = GlowLilac,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Locked • Tap to Unlock",
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Channel Info Card
@@ -534,15 +659,16 @@ fun PlayerScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (channel.logoUrl.isNotBlank()) {
+                        val resolvedLogo = com.example.domain.ChannelLogoResolver.resolve(channel.name, channel.logoUrl)
+                        if (resolvedLogo.isNotBlank()) {
                             AsyncImage(
-                                model = channel.logoUrl,
+                                model = resolvedLogo,
                                 contentDescription = null,
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier
                                     .size(46.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF1B143E))
+                                    .background(Color.Transparent)
                                     .padding(4.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -774,10 +900,12 @@ private fun PlayerControlsOverlay(
     onToggleResize: () -> Unit,
     onToggleFavorite: () -> Unit,
     onToggleClosedCaptions: () -> Unit = {},
+    isLocked: Boolean = false,
+    onToggleLock: () -> Unit = {},
     onRetry: () -> Unit
 ) {
     AnimatedVisibility(
-        visible = showControls || isBuffering || streamError != null,
+        visible = (showControls || isBuffering || streamError != null) && !isLocked,
         enter = fadeIn(),
         exit = fadeOut()
     ) {
@@ -1049,6 +1177,19 @@ private fun PlayerControlsOverlay(
                             Icon(
                                 imageVector = if (isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
                                 contentDescription = if (isMuted) "Unmute" else "Mute",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Lock Player Controls
+                        IconButton(
+                            onClick = onToggleLock,
+                            modifier = Modifier.testTag("player_lock_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = "Lock controls",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )

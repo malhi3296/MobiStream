@@ -51,38 +51,35 @@ class ChannelRepository(
     }.flowOn(Dispatchers.IO)
 
     val favoriteChannels: Flow<List<Channel>> = combine(
-        channelDao.getAllChannels(),
-        favoriteDao.getFavoriteIds(),
+        channelDao.getFavoriteChannels(),
         pinnedDao.getPinnedIds()
-    ) { entities, favIds, pinIds ->
-        val favSet = favIds.toSet()
+    ) { entities, pinIds ->
         val pinSet = pinIds.toSet()
-        entities.filter { favSet.contains(it.id) }
-            .map {
-                it.toDomain(
-                    isFavorite = true,
-                    isPinned = pinSet.contains(it.id)
-                )
-            }
+        entities.map {
+            it.toDomain(
+                isFavorite = true,
+                isPinned = pinSet.contains(it.id)
+            )
+        }
     }.flowOn(Dispatchers.IO)
 
     // Pinned and Favourites combined, with Pinned channels strictly first!
     val pinnedAndFavorites: Flow<List<Channel>> = combine(
-        channelDao.getAllChannels(),
-        favoriteDao.getFavoriteIds(),
-        pinnedDao.getPinnedIds()
-    ) { entities, favIds, pinIds ->
+        channelDao.getPinnedChannels(),
+        channelDao.getFavoriteChannels(),
+        pinnedDao.getPinnedIds(),
+        favoriteDao.getFavoriteIds()
+    ) { pinnedEntities, favEntities, pinIds, favIds ->
         val favSet = favIds.toSet()
         val pinSet = pinIds.toSet()
-        val channelMap = entities.associateBy { it.id }
 
-        val pinnedList = pinIds.mapNotNull { channelMap[it] }
+        val pinnedMap = pinnedEntities.associateBy { it.id }
+        val pinnedList = pinIds.mapNotNull { pinnedMap[it] }
             .map { it.toDomain(isFavorite = favSet.contains(it.id), isPinned = true) }
 
         val pinnedIdSet = pinnedList.map { it.id }.toSet()
 
-        val favList = favIds.filter { !pinnedIdSet.contains(it) }
-            .mapNotNull { channelMap[it] }
+        val favList = favEntities.filter { !pinnedIdSet.contains(it.id) }
             .map { it.toDomain(isFavorite = true, isPinned = false) }
 
         pinnedList + favList
@@ -301,33 +298,31 @@ class ChannelRepository(
         return countryCode to countryName
     }
 
-    suspend fun getAvailableCategories(): List<Category> = withContext(Dispatchers.IO) {
+    suspend fun getFilterMetadata(): Triple<List<Category>, List<Country>, List<Language>> = withContext(Dispatchers.IO) {
         val channels = channelDao.getAllChannels().first()
-        val grouped = channels.groupBy { it.category }
+
+        // 1. Categories
+        val groupedCategories = channels.groupBy { it.category }
         val predefinedOrder = listOf(
             "Sports", "News", "Movies", "Series", "Music", "Animation",
             "Kids", "Documentary", "Comedy", "Entertainment", "Education",
             "Auto", "Business", "Lifestyle", "Science", "Travel"
         )
-
-        val result = mutableListOf<Category>()
+        val categories = mutableListOf<Category>()
         for (cat in predefinedOrder) {
-            val count = grouped[cat]?.size ?: 0
+            val count = groupedCategories[cat]?.size ?: 0
             if (count > 0) {
-                result.add(Category(id = cat.lowercase(), name = cat, channelCount = count))
+                categories.add(Category(id = cat.lowercase(), name = cat, channelCount = count))
             }
         }
-        for ((cat, list) in grouped) {
+        for ((cat, list) in groupedCategories) {
             if (cat !in predefinedOrder && list.isNotEmpty() && cat != "Undefined") {
-                result.add(Category(id = cat.lowercase(), name = cat, channelCount = list.size))
+                categories.add(Category(id = cat.lowercase(), name = cat, channelCount = list.size))
             }
         }
-        result
-    }
 
-    suspend fun getAvailableCountries(): List<Country> = withContext(Dispatchers.IO) {
-        val channels = channelDao.getAllChannels().first()
-        channels.groupBy { it.countryCode to it.country }
+        // 2. Countries
+        val countries = channels.groupBy { it.countryCode to it.country }
             .map { (key, list) ->
                 Country(
                     code = key.first,
@@ -338,10 +333,8 @@ class ChannelRepository(
             }
             .filter { it.name.isNotBlank() && it.code != "INT" }
             .sortedBy { it.name }
-    }
 
-    suspend fun getAvailableLanguages(): List<Language> = withContext(Dispatchers.IO) {
-        val channels = channelDao.getAllChannels().first()
+        // 3. Languages
         val indianPriority = listOf(
             "Punjabi" to "pan",
             "Hindi" to "hin",
@@ -355,18 +348,14 @@ class ChannelRepository(
             "Marathi" to "mar",
             "Gujarati" to "guj"
         )
-
         val channelLanguageCount = channels.groupBy { it.language.lowercase(Locale.ROOT) }
             .mapValues { it.value.size }
-
-        val result = mutableListOf<Language>()
-
-        // 1. Indian priority languages at top (Punjabi strictly first)
+        val languages = mutableListOf<Language>()
         for ((lang, code) in indianPriority) {
             val dbCount = (channelLanguageCount[lang.lowercase()] ?: 0) +
                     (channelLanguageCount[code] ?: 0) +
                     (if (lang == "Punjabi") (channelLanguageCount["panjabi"] ?: 0) else 0)
-            result.add(
+            languages.add(
                 Language(
                     code = code,
                     name = lang,
@@ -374,8 +363,6 @@ class ChannelRepository(
                 )
             )
         }
-
-        // 2. All other canonical languages from PLAYLISTS.md
         val otherCanonical = listOf(
             "Arabic" to "ara", "Bulgarian" to "bul", "Catalan" to "cat", "Chinese" to "zho",
             "Croatian" to "hrv", "Czech" to "ces", "Danish" to "dan", "Dutch" to "nld",
@@ -386,7 +373,6 @@ class ChannelRepository(
             "Swedish" to "swe", "Thai" to "tha", "Turkish" to "tur", "Ukrainian" to "ukr",
             "Vietnamese" to "vie"
         )
-
         val others = otherCanonical.map { (lang, code) ->
             val dbCount = (channelLanguageCount[lang.lowercase()] ?: 0) + (channelLanguageCount[code] ?: 0)
             Language(
@@ -396,8 +382,12 @@ class ChannelRepository(
             )
         }.sortedBy { it.name }
 
-        result + others
+        Triple(categories, countries, languages + others)
     }
+
+    suspend fun getAvailableCategories(): List<Category> = getFilterMetadata().first
+    suspend fun getAvailableCountries(): List<Country> = getFilterMetadata().second
+    suspend fun getAvailableLanguages(): List<Language> = getFilterMetadata().third
 
     private fun getCountryEmoji(countryCode: String): String {
         if (countryCode.length != 2) return "🌐"

@@ -254,7 +254,7 @@ object SeedChannels {
         Channel(
             id = "ptc_news",
             name = "PTC News",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/PTCNews.in.png",
+            logoUrl = "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_PTC_NEWS/images/LOGO_HD/image.png",
             streamUrl = "https://ptcplay-live.akamaized.net/live/ptcnews/master.m3u8",
             category = "News",
             country = "India",
@@ -267,7 +267,7 @@ object SeedChannels {
         Channel(
             id = "ptc_punjabi",
             name = "PTC Punjabi",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/PTCPunjabi.in.png",
+            logoUrl = "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_PTC_PUNJABI/images/LOGO_HD/image.png",
             streamUrl = "https://ptcplay-live.akamaized.net/live/ptcpunjabi/master.m3u8",
             category = "Entertainment",
             country = "India",
@@ -280,7 +280,7 @@ object SeedChannels {
         Channel(
             id = "chardikla_time_tv",
             name = "Chardikla Time TV",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/TimeTV.in.png",
+            logoUrl = "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_CHARDIKLA_TIME_TV/images/LOGO_HD/image.png",
             streamUrl = "https://live.chardiklatimetv.com/hls/stream.m3u8",
             category = "News",
             country = "India",
@@ -293,7 +293,7 @@ object SeedChannels {
         Channel(
             id = "ndtv_india",
             name = "NDTV 24x7",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/NDTV24x7.in.png",
+            logoUrl = "https://dtil.tmsimg.com/assets/s154895_ld_h15_aa.png?lock=720x540",
             streamUrl = "https://ndtv24x7elemaster-lh.akamaihd.net/i/ndtv_24x7_1@300640/master.m3u8",
             category = "News",
             country = "India",
@@ -306,7 +306,7 @@ object SeedChannels {
         Channel(
             id = "dd_news_india",
             name = "DD News",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/DDNews.in.png",
+            logoUrl = "https://ltsk-cdn.s3.eu-west-1.amazonaws.com/jumpstart/Temp_Live/cdn/HLS/Channel/transparentImages/DD%20News%20HD.png",
             streamUrl = "https://ddnews-live.akamaized.net/hls/live/2034980/ddnews/master.m3u8",
             category = "News",
             country = "India",
@@ -397,7 +397,7 @@ object SeedChannels {
         Channel(
             id = "history_tv18_in",
             name = "History TV18",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/HistoryTV18.in.png",
+            logoUrl = "https://dtil.tmsimg.com/assets/s143133_ld_h15_aa.png?lock=720x540",
             streamUrl = "https://live.historyindia.com/hls/live/master.m3u8",
             category = "Documentary",
             country = "India",
@@ -410,7 +410,7 @@ object SeedChannels {
         Channel(
             id = "aaj_tak_news",
             name = "Aaj Tak",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/AajTak.in.png",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/commons/2/28/Aaj_tak_logo.png",
             streamUrl = "https://aajtaklive-amd.akamaized.net/hls/live/2014416/aajtak/aajtaklive/master.m3u8",
             category = "News",
             country = "India",
@@ -423,7 +423,7 @@ object SeedChannels {
         Channel(
             id = "9x_tashan_music",
             name = "9X Tashan",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/9XTashan.in.png",
+            logoUrl = "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_9X_TASHAN/images/LOGO_HD/image.png",
             streamUrl = "https://amg01281-9xmediapvtltd-9xtashan-samsungin-xz1sd.amagi.tv/playlist/amg01281-9xmediapvtltd-9xtashan-samsungin/playlist.m3u8",
             category = "Music",
             country = "India",
@@ -436,7 +436,7 @@ object SeedChannels {
         Channel(
             id = "abp_sanjha_punjabi",
             name = "ABP Sanjha",
-            logoUrl = "https://raw.githubusercontent.com/iptv-org/epg/master/logos/ABPSanjha.in.png",
+            logoUrl = "https://jiotvimages.cdn.jio.com/dare_images/images/ABP_Sanjha.png",
             streamUrl = "https://abpsanjha-live.akamaized.net/hls/live/2014420/abpsanjha/master.m3u8",
             category = "News",
             country = "India",

@@ -21,7 +21,7 @@ data class ChannelEntity(
     fun toDomain(isFavorite: Boolean = false, isPinned: Boolean = false): Channel = Channel(
         id = id,
         name = name,
-        logoUrl = logoUrl,
+        logoUrl = com.example.domain.ChannelLogoResolver.resolve(name, logoUrl),
         streamUrl = streamUrl,
         category = category,
         country = country,

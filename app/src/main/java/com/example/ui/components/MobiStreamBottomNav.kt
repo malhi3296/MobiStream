@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -65,25 +66,36 @@ fun MobiStreamBottomNav(
 ) {
     val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
 
+    val navBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
+    val topBorderColor = if (isDark) Color(0x33FFFFFF) else Color(0x1F000000)
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = if (isDark) Color(0xFF2C2266) else Color(0xFFEEEEF4)
+            .shadow(
+                elevation = 10.dp,
+                spotColor = if (isDark) Color(0x99000000) else Color(0x26000000),
+                ambientColor = if (isDark) Color(0x66000000) else Color(0x14000000)
             ),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+        color = navBg
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(62.dp)
-                .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Subtle top border divider line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(topBorderColor)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .height(62.dp)
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             NavDestination.values().forEach { destination ->
                 val isSelected = currentDestination == destination
 
@@ -138,4 +150,5 @@ fun MobiStreamBottomNav(
             }
         }
     }
+}
 }
