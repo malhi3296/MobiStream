@@ -1,36 +1,20 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.Tag4kPurple
-import com.example.ui.theme.TagLiveRed
-import com.example.ui.theme.TagLiveTvBlue
-import com.example.ui.theme.TagMoviesGreen
-import com.example.ui.theme.TagSeriesOrange
+import com.example.ui.theme.mobiColors
 
 enum class StreamTagType {
     LIVE,
@@ -47,56 +31,32 @@ fun StreamTagBadge(
     modifier: Modifier = Modifier,
     customText: String? = null
 ) {
+    val colors = MaterialTheme.colorScheme
+    val mobi = MaterialTheme.mobiColors
+
     val (bgColor, textColor, defaultLabel) = when (type) {
-        StreamTagType.LIVE -> Triple(TagLiveRed, Color.White, "LIVE")
-        StreamTagType.LIVE_TV -> Triple(TagLiveTvBlue, Color.White, "LIVE TV")
-        StreamTagType.MOVIES -> Triple(TagMoviesGreen, Color.White, "MOVIES")
-        StreamTagType.SERIES -> Triple(TagSeriesOrange, Color.White, "SERIES")
-        StreamTagType.QUALITY_4K -> Triple(Tag4kPurple, Color.White, "4K")
-        StreamTagType.QUALITY_HD -> Triple(Color(0xFF6366F1), Color.White, "HD")
+        StreamTagType.LIVE -> Triple(mobi.liveBadge, Color.White, "LIVE")
+        StreamTagType.LIVE_TV -> Triple(colors.primary, colors.onPrimary, "LIVE TV")
+        StreamTagType.MOVIES -> Triple(colors.secondaryContainer, colors.onSecondaryContainer, "MOVIES")
+        StreamTagType.SERIES -> Triple(colors.secondaryContainer, colors.onSecondaryContainer, "SERIES")
+        StreamTagType.QUALITY_4K -> Triple(colors.primary, colors.onPrimary, "4K")
+        StreamTagType.QUALITY_HD -> Triple(colors.secondaryContainer, colors.onSecondaryContainer, "HD")
     }
 
     val label = customText ?: defaultLabel
-
-    val shape = RoundedCornerShape(6.dp)
-
     Box(
         modifier = modifier
-            .clip(shape)
+            .clip(RoundedCornerShape(6.dp))
             .background(bgColor)
             .padding(horizontal = 8.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (type == StreamTagType.LIVE) {
-                // Pulsing dot for LIVE badge
-                val transition = rememberInfiniteTransition(label = "pulse")
-                val alpha by transition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(600),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "pulseAlpha"
-                )
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .alpha(alpha)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-            }
-            Text(
-                text = label,
-                color = textColor,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 10.sp,
-                letterSpacing = 0.5.sp
-            )
-        }
+        Text(
+            text = label,
+            color = textColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            letterSpacing = 0.5.sp
+        )
     }
 }

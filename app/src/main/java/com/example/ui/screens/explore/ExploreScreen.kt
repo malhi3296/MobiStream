@@ -1,12 +1,15 @@
 package com.example.ui.screens.explore
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,31 +21,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.ChildCare
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.LiveTv
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Newspaper
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.SportsSoccer
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,33 +51,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.icons.filled.BusinessCenter
-import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.FamilyRestroom
-import androidx.compose.material.icons.filled.FlightTakeoff
-import androidx.compose.material.icons.filled.HistoryEdu
-import androidx.compose.material.icons.filled.Landscape
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.filled.SelfImprovement
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.TheaterComedy
-import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material.icons.filled.WbSunny
 import com.example.data.model.Category
 import com.example.data.model.Channel
 import com.example.data.model.Country
@@ -84,22 +67,25 @@ import com.example.data.model.Language
 import com.example.domain.FilterOptions
 import com.example.domain.GroupType
 import com.example.domain.SelectedGroup
-import com.example.ui.components.ChannelCard
-import com.example.ui.components.CountryChannelCard
-import com.example.ui.components.SectionHeader
+import com.example.ui.components.ChannelListItem
+import com.example.ui.components.MobiChip
+import com.example.ui.components.MobiSearchBar
+import com.example.ui.components.MobiSectionHeader
 import com.example.ui.components.getCountryFlag
-import com.example.ui.theme.GlowLilac
-import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.StreamViolet
-import com.example.ui.theme.TextDarkPrimary
-import com.example.ui.theme.TextDarkSecondary
+import com.example.ui.components.getLanguageGlyph
+import com.example.ui.theme.MobiCardShape
+import com.example.ui.theme.MobiIconButtonShape
+import com.example.ui.theme.MobiStreamTheme
+import com.example.ui.theme.mobiColors
+import kotlin.math.abs
 
-enum class ExploreSubView {
-    NONE,
-    ALL_COUNTRIES,
-    ALL_LANGUAGES
-}
+private data class ExploreCategoryCardMeta(
+    val name: String,
+    val icon: ImageVector,
+    val countHint: String
+)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExploreScreen(
     allChannels: List<Channel>,
@@ -119,614 +105,350 @@ fun ExploreScreen(
     onToggleFavorite: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     lastWatchedChannelId: String? = null,
+    onMenuClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-    var subView by remember { mutableStateOf(ExploreSubView.NONE) }
-    var subViewSearch by remember { mutableStateOf("") }
+    val colors = MaterialTheme.colorScheme
+    val mobi = MaterialTheme.mobiColors
 
-    // Dynamic, exact counts calculated from the current allChannels dataset
-    // Ensuring outside card count and inside detail count are 100% in sync
+    var searchQuery by remember { mutableStateOf("") }
+    var showAllCategories by remember { mutableStateOf(false) }
+    var showAllCountries by remember { mutableStateOf(false) }
+    var showAllLanguages by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedGroup) {
+        if (selectedGroup?.type == GroupType.LANGUAGE) {
+            onFetchLanguageChannels(selectedGroup.identifier)
+        }
+    }
+
+    BackHandler(
+        enabled = selectedGroup != null ||
+            showAllCategories ||
+            showAllCountries ||
+            showAllLanguages ||
+            searchQuery.isNotBlank()
+    ) {
+        when {
+            searchQuery.isNotBlank() -> {
+                searchQuery = ""
+                onSearchQueryChange("")
+            }
+            selectedGroup != null -> onSelectGroup(null)
+            showAllCategories -> showAllCategories = false
+            showAllCountries -> showAllCountries = false
+            showAllLanguages -> showAllLanguages = false
+        }
+    }
+
     val categoryCounts = remember(allChannels) {
-        val map = mutableMapOf<String, Int>()
-        allChannels.forEach { ch ->
-            val cat = ch.category.trim()
-            if (cat.isNotEmpty()) {
-                map[cat.lowercase(java.util.Locale.ROOT)] = (map[cat.lowercase(java.util.Locale.ROOT)] ?: 0) + 1
+        allChannels.groupingBy { it.category.trim().lowercase() }.eachCount()
+    }
+
+    val exploreCategories = remember(categories, categoryCounts) {
+        val baseNames = listOf(
+            "Sports", "News", "Movies", "Business", "Comedy",
+            "Music", "Documentary", "Kids", "Education", "Science", "Auto", "Entertainment"
+        )
+        val combined = (baseNames + categories.map { it.name.trim() })
+            .filter { it.isNotBlank() }
+            .distinct()
+        combined.map { name ->
+            val icon = when {
+                name.contains("sport", ignoreCase = true) -> Icons.Outlined.SportsSoccer
+                name.contains("news", ignoreCase = true) -> Icons.Outlined.Newspaper
+                name.contains("movie", ignoreCase = true) || name.contains("series", ignoreCase = true) -> Icons.Outlined.Movie
+                name.contains("music", ignoreCase = true) -> Icons.Outlined.MusicNote
+                name.contains("kid", ignoreCase = true) || name.contains("anim", ignoreCase = true) -> Icons.Outlined.ChildCare
+                name.contains("educat", ignoreCase = true) -> Icons.Outlined.School
+                name.contains("science", ignoreCase = true) || name.contains("doc", ignoreCase = true) -> Icons.Outlined.Science
+                name.contains("auto", ignoreCase = true) -> Icons.Outlined.DirectionsCar
+                name.contains("entertain", ignoreCase = true) || name.contains("live", ignoreCase = true) -> Icons.Outlined.LiveTv
+                else -> Icons.Outlined.Category
             }
+            val count = categoryCounts[name.lowercase()] ?: 0
+            ExploreCategoryCardMeta(
+                name = name,
+                icon = icon,
+                countHint = if (count > 0) "$count channels" else "Live TV"
+            )
         }
-        map
     }
 
-    val countryCounts = remember(allChannels) {
-        val map = mutableMapOf<String, Int>()
-        allChannels.forEach { ch ->
-            val code = ch.countryCode.trim().lowercase(java.util.Locale.ROOT)
-            val name = ch.country.trim().lowercase(java.util.Locale.ROOT)
-            if (code.isNotEmpty()) map[code] = (map[code] ?: 0) + 1
-            if (name.isNotEmpty()) map[name] = (map[name] ?: 0) + 1
-        }
-        map
+    val exploreCountries = remember(countries) {
+        val fallback = listOf(
+            "US" to "United States",
+            "IN" to "India",
+            "GB" to "United Kingdom",
+            "CA" to "Canada",
+            "AU" to "Australia",
+            "QA" to "Qatar",
+            "DE" to "Germany",
+            "FR" to "France",
+            "ES" to "Spain",
+            "BR" to "Brazil",
+            "JP" to "Japan"
+        )
+        if (countries.isEmpty()) fallback
+        else countries.map { it.code to it.name }.ifEmpty { fallback }
     }
 
-    val languageCounts = remember(allChannels, languages) {
-        val map = mutableMapOf<String, Int>()
-        val codeToName = mutableMapOf<String, String>()
-        languages.forEach { l ->
-            val n = l.name
-            codeToName[l.code.lowercase(java.util.Locale.ROOT)] = n
-            codeToName[n.lowercase(java.util.Locale.ROOT)] = n
-        }
-        allChannels.forEach { ch ->
-            val lang = ch.language.trim().lowercase(java.util.Locale.ROOT)
-            val matched = codeToName[lang]
-            if (matched != null) {
-                map[matched] = (map[matched] ?: 0) + 1
-            } else {
-                val id = ch.id.lowercase(java.util.Locale.ROOT)
-                when {
-                    lang.contains("punjabi") || id.contains("punjabi") || id.contains(".pan@") -> map["Punjabi"] = (map["Punjabi"] ?: 0) + 1
-                    lang.contains("hindi") || id.contains(".hin@") -> map["Hindi"] = (map["Hindi"] ?: 0) + 1
-                    lang.contains("english") || id.contains(".eng@") -> map["English"] = (map["English"] ?: 0) + 1
-                    lang.contains("urdu") || id.contains(".urd@") -> map["Urdu"] = (map["Urdu"] ?: 0) + 1
-                    lang.contains("tamil") || id.contains(".tam@") -> map["Tamil"] = (map["Tamil"] ?: 0) + 1
-                    lang.contains("telugu") || id.contains(".tel@") -> map["Telugu"] = (map["Telugu"] ?: 0) + 1
-                    lang.contains("bengali") || id.contains(".ben@") -> map["Bengali"] = (map["Bengali"] ?: 0) + 1
-                    lang.contains("malayalam") || id.contains(".mal@") -> map["Malayalam"] = (map["Malayalam"] ?: 0) + 1
-                    lang.contains("kannada") || id.contains(".kan@") -> map["Kannada"] = (map["Kannada"] ?: 0) + 1
-                    lang.contains("marathi") || id.contains(".mar@") -> map["Marathi"] = (map["Marathi"] ?: 0) + 1
-                    lang.contains("gujarati") || id.contains(".guj@") -> map["Gujarati"] = (map["Gujarati"] ?: 0) + 1
-                    lang.contains("spanish") || id.contains(".spa@") -> map["Spanish"] = (map["Spanish"] ?: 0) + 1
-                    lang.contains("french") || id.contains(".fra@") -> map["French"] = (map["French"] ?: 0) + 1
-                    lang.contains("arabic") || id.contains(".ara@") -> map["Arabic"] = (map["Arabic"] ?: 0) + 1
-                    lang.contains("russian") || id.contains(".rus@") -> map["Russian"] = (map["Russian"] ?: 0) + 1
-                    lang.contains("german") || id.contains(".deu@") -> map["German"] = (map["German"] ?: 0) + 1
+    val exploreLanguages = remember(languages) {
+        val fallback = listOf(
+            "English", "Hindi", "Punjabi", "Spanish", "Arabic",
+            "French", "German", "Urdu", "Tamil", "Telugu", "Russian"
+        )
+        if (languages.isEmpty()) fallback
+        else languages.map { it.name }.filter { it.isNotBlank() }.distinct().ifEmpty { fallback }
+    }
+
+    val groupFilteredChannels = remember(allChannels, selectedGroup, searchQuery) {
+        val base = when (selectedGroup?.type) {
+            GroupType.CATEGORY -> {
+                val matched = allChannels.filter {
+                    it.category.equals(selectedGroup.identifier, ignoreCase = true)
                 }
+                sortCategoryChannels(selectedGroup.identifier, matched)
+            }
+            GroupType.COUNTRY -> allChannels.filter {
+                it.countryCode.equals(selectedGroup.identifier, ignoreCase = true) ||
+                    it.country.equals(selectedGroup.identifier, ignoreCase = true)
+            }
+            GroupType.LANGUAGE -> allChannels.filter {
+                it.language.contains(selectedGroup.identifier, ignoreCase = true)
+            }
+            null -> allChannels
+        }
+
+        if (searchQuery.isBlank()) {
+            base
+        } else {
+            base.filter { channel ->
+                channel.name.contains(searchQuery, ignoreCase = true) ||
+                    channel.category.contains(searchQuery, ignoreCase = true) ||
+                    channel.country.contains(searchQuery, ignoreCase = true) ||
+                    channel.language.contains(searchQuery, ignoreCase = true)
             }
         }
-        map
     }
 
-    // High-contrast text colors
-    val primaryTextColor = if (isDark) Color.White else TextDarkPrimary
-    val secondaryTextColor = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
-
-    // 1. If a category, country, or language is selected, show its live channel list
-    if (selectedGroup != null) {
-        val group = selectedGroup
-        BackHandler { onSelectGroup(null) }
-
-        androidx.compose.runtime.LaunchedEffect(group) {
-            if (group.type == GroupType.LANGUAGE) {
-                onFetchLanguageChannels(group.identifier)
-            }
-        }
-
-        val matchingChannels = remember(group, allChannels, filterOptions) {
-            val raw = allChannels.filter { channel ->
-                val matchesGroup = isChannelMatchingGroup(channel, group.type, group.identifier, group.title)
-                val matchesFilter = if (filterOptions.selectedQuality != "All") {
-                    channel.quality.contains(filterOptions.selectedQuality, ignoreCase = true)
-                } else true
-
-                matchesGroup && matchesFilter
-            }
-
-            // Prioritize popular global channels at the top for categories
-            if (group.type == GroupType.CATEGORY) {
-                sortCategoryChannels(group.identifier, raw)
-            } else {
-                raw
-            }
-        }
-
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .testTag("group_channel_detail_screen")
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.background)
+            .testTag("explore_screen")
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 110.dp)
         ) {
-            // Group Header with Back button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { onSelectGroup(null) },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to Explore",
-                        tint = primaryTextColor
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = group.title,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = primaryTextColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "${matchingChannels.size} live channels available",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = secondaryTextColor
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isDark) Color(0xFF281E57) else Color(0xFFEFE9FE))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = when (group.type) {
-                            GroupType.CATEGORY -> "Category"
-                            GroupType.COUNTRY -> "Country"
-                            GroupType.LANGUAGE -> "Language"
-                        },
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
-                        color = if (isDark) GlowLilac else StreamViolet
-                    )
-                }
-            }
-
-            // Grid of matching channels
-            if (matchingChannels.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "No channels found for ${group.title}",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = primaryTextColor
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Try another category or sync playlists from settings.",
-                            fontFamily = InterFontFamily,
-                            fontSize = 13.sp,
-                            color = secondaryTextColor
-                        )
-                    }
-                }
-            } else {
-                val gridState = rememberLazyGridState()
-                androidx.compose.runtime.LaunchedEffect(lastWatchedChannelId, matchingChannels) {
-                    if (!lastWatchedChannelId.isNullOrEmpty()) {
-                        val targetIndex = matchingChannels.indexOfFirst { it.id == lastWatchedChannelId }
-                        if (targetIndex >= 0) {
-                            gridState.scrollToItem(targetIndex)
-                        }
-                    }
-                }
-
-                LazyVerticalGrid(
-                    state = gridState,
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(matchingChannels) { channel ->
-                        ChannelCard(
-                            channel = channel,
-                            onClick = { onSelectChannel(channel) },
-                            onToggleFavorite = { onToggleFavorite(channel.id) }
-                        )
-                    }
-                }
-            }
-        }
-    } else if (subView == ExploreSubView.ALL_COUNTRIES) {
-        // Requirement 13: "See all" for Countries in alphabetical order
-        BackHandler { subView = ExploreSubView.NONE }
-
-        val filteredCountries = remember(countries, subViewSearch) {
-            if (subViewSearch.isBlank()) countries
-            else countries.filter {
-                it.name.contains(subViewSearch, ignoreCase = true) ||
-                        it.code.contains(subViewSearch, ignoreCase = true)
-            }
-        }
-
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { subView = ExploreSubView.NONE },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = primaryTextColor
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "All Countries (A-Z)",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = primaryTextColor
-                    )
-                    Text(
-                        text = "${countries.size} countries available",
-                        fontFamily = InterFontFamily,
-                        fontSize = 12.sp,
-                        color = secondaryTextColor
-                    )
-                }
-            }
-
-            // Search filter for countries
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                OutlinedTextField(
-                    value = subViewSearch,
-                    onValueChange = { subViewSearch = it },
-                    placeholder = { Text("Search countries...", color = secondaryTextColor) },
-                    leadingIcon = { Icon(Icons.Default.Search, null, tint = StreamViolet) },
-                    trailingIcon = {
-                        if (subViewSearch.isNotEmpty()) {
-                            IconButton(onClick = { subViewSearch = "" }) {
-                                Icon(Icons.Default.Close, null, tint = secondaryTextColor)
-                            }
-                        }
+            // 1. Search Bar pill + round accent menu button
+            item {
+                MobiSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { q ->
+                        searchQuery = q
+                        onSearchQueryChange(q)
                     },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
-                        unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
-                        focusedBorderColor = StreamViolet,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = primaryTextColor,
-                        unfocusedTextColor = primaryTextColor
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                    hint = "Search 11,000+ channels by name...",
+                    onMenuClick = onMenuClick
                 )
             }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(filteredCountries) { country ->
-                    BigCountryCard(
-                        country = country,
-                        isDark = isDark,
-                        dynamicCount = countryCounts[country.code.lowercase(java.util.Locale.ROOT)] ?: countryCounts[country.name.lowercase(java.util.Locale.ROOT)],
-                        onClick = {
-                            subView = ExploreSubView.NONE
-                            onSelectGroup(
-                                SelectedGroup(
-                                    type = GroupType.COUNTRY,
-                                    title = "${country.flag} ${country.name}",
-                                    identifier = country.code
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-        }
-    } else if (subView == ExploreSubView.ALL_LANGUAGES) {
-        // Requirement 12: "See all" for Languages (Indian languages on top, punjabi first)
-        BackHandler { subView = ExploreSubView.NONE }
-
-        val filteredLanguages = remember(languages, subViewSearch) {
-            if (subViewSearch.isBlank()) languages
-            else languages.filter {
-                it.name.contains(subViewSearch, ignoreCase = true) ||
-                        it.code.contains(subViewSearch, ignoreCase = true)
-            }
-        }
-
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { subView = ExploreSubView.NONE },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = primaryTextColor
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "All Languages",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = primaryTextColor
-                    )
-                    Text(
-                        text = "${languages.size} languages available (Punjabi & Indian priority)",
-                        fontFamily = InterFontFamily,
-                        fontSize = 12.sp,
-                        color = secondaryTextColor
-                    )
-                }
-            }
-
-            // Search filter for languages
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                OutlinedTextField(
-                    value = subViewSearch,
-                    onValueChange = { subViewSearch = it },
-                    placeholder = { Text("Search languages...", color = secondaryTextColor) },
-                    leadingIcon = { Icon(Icons.Default.Search, null, tint = StreamViolet) },
-                    trailingIcon = {
-                        if (subViewSearch.isNotEmpty()) {
-                            IconButton(onClick = { subViewSearch = "" }) {
-                                Icon(Icons.Default.Close, null, tint = secondaryTextColor)
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
-                        unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
-                        focusedBorderColor = StreamViolet,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = primaryTextColor,
-                        unfocusedTextColor = primaryTextColor
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
-                )
-            }
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(filteredLanguages) { language ->
-                    BigLanguageCard(
-                        language = language,
-                        isDark = isDark,
-                        dynamicCount = languageCounts[language.name],
-                        onClick = {
-                            subView = ExploreSubView.NONE
-                            onSelectGroup(
-                                SelectedGroup(
-                                    type = GroupType.LANGUAGE,
-                                    title = "${language.name} Channels",
-                                    identifier = language.name
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-        }
-    } else {
-        // Explore Root Page
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .testTag("explore_screen")
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 90.dp)
-            ) {
-                // 1. Top Channel List Slider: Left to right with user country
+            // 2. Drilldown / See-all subview header when active
+            if (selectedGroup != null || showAllCategories || showAllCountries || showAllLanguages) {
                 item {
-                    val countryFlag = getCountryFlag(detectedCountryCode)
-                    SectionHeader(
-                        title = "Popular in $countryFlag $detectedCountryName",
-                        onSeeAllClick = {
-                            onSelectGroup(
-                                SelectedGroup(
-                                    type = GroupType.COUNTRY,
-                                    title = "$countryFlag $detectedCountryName",
-                                    identifier = detectedCountryCode
+                    val subTitle = when {
+                        selectedGroup != null -> selectedGroup.title
+                        showAllCategories -> "Categories"
+                        showAllCountries -> "Countries"
+                        else -> "Languages"
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(MobiIconButtonShape)
+                                .clickable {
+                                    when {
+                                        selectedGroup != null -> onSelectGroup(null)
+                                        showAllCategories -> showAllCategories = false
+                                        showAllCountries -> showAllCountries = false
+                                        showAllLanguages -> showAllLanguages = false
+                                    }
+                                },
+                            shape = MobiIconButtonShape,
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.outline)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = colors.onSurface,
+                                    modifier = Modifier.size(20.dp)
                                 )
-                            )
+                            }
                         }
-                    )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = subTitle,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = colors.onBackground
+                            )
+                            if (selectedGroup != null) {
+                                Text(
+                                    text = "${groupFilteredChannels.size} channels",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colors.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Main Explore Intro
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = "Discover 11,000+ Channels",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = colors.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Browse live television across 50+ categories, 150+ countries, and all global languages.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                }
+            }
 
-                    if (countryChannels.isNotEmpty()) {
+            // 3. Expanded sub-grids for See all modes
+            when {
+                showAllCategories && selectedGroup == null -> {
+                    item {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            exploreCategories.forEach { catMeta ->
+                                ExploreCategoryTile(
+                                    meta = catMeta,
+                                    onClick = {
+                                        showAllCategories = false
+                                        onSelectGroup(
+                                            SelectedGroup(
+                                                type = GroupType.CATEGORY,
+                                                title = catMeta.name,
+                                                identifier = catMeta.name
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                showAllCountries && selectedGroup == null -> {
+                    item {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            exploreCountries.forEach { (cc, name) ->
+                                MobiChip(
+                                    label = name,
+                                    leadingGlyph = getCountryFlag(cc),
+                                    selected = false,
+                                    onClick = {
+                                        showAllCountries = false
+                                        onSelectGroup(
+                                            SelectedGroup(
+                                                type = GroupType.COUNTRY,
+                                                title = "${getCountryFlag(cc)} $name",
+                                                identifier = cc
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                showAllLanguages && selectedGroup == null -> {
+                    item {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            exploreLanguages.forEach { lang ->
+                                MobiChip(
+                                    label = lang,
+                                    leadingGlyph = getLanguageGlyph(lang),
+                                    selected = false,
+                                    onClick = {
+                                        showAllLanguages = false
+                                        onSelectGroup(
+                                            SelectedGroup(
+                                                type = GroupType.LANGUAGE,
+                                                title = "$lang Channels",
+                                                identifier = lang
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                selectedGroup == null && searchQuery.isBlank() -> {
+                    // Categories Section with "See all"
+                    item {
+                        MobiSectionHeader(
+                            title = "Categories",
+                            actionText = "See all",
+                            onActionClick = { showAllCategories = true }
+                        )
                         LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
                         ) {
-                            items(countryChannels) { channel ->
-                                CountryChannelCard(
-                                    channel = channel,
-                                    onPlayClick = { onSelectChannel(channel) },
-                                    onToggleFavorite = { onToggleFavorite(channel.id) }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 2. Search Bar
-                item {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = filterOptions.searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            placeholder = {
-                                Text(
-                                    text = "Search 11,000+ channels by name...",
-                                    fontFamily = InterFontFamily,
-                                    fontSize = 14.sp,
-                                    color = secondaryTextColor
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = if (isDark) GlowLilac else StreamViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            trailingIcon = {
-                                if (filterOptions.searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { onSearchQueryChange("") }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear search",
-                                            tint = secondaryTextColor,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(18.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
-                                unfocusedContainerColor = if (isDark) Color(0xFF1E174A) else Color(0xFFF3F4F8),
-                                focusedBorderColor = StreamViolet,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = primaryTextColor,
-                                unfocusedTextColor = primaryTextColor
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .testTag("explore_search_bar")
-                        )
-                    }
-                }
-
-                // If user typed in search query, show direct search results
-                if (filterOptions.searchQuery.isNotBlank()) {
-                    val searchResults = allChannels.filter {
-                        it.name.contains(filterOptions.searchQuery, ignoreCase = true) ||
-                                it.category.contains(filterOptions.searchQuery, ignoreCase = true) ||
-                                it.country.contains(filterOptions.searchQuery, ignoreCase = true)
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "${searchResults.size} channels found",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = primaryTextColor,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                        )
-                    }
-
-                    items(searchResults.chunked(2)) { pair ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            for (channel in pair) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    ChannelCard(
-                                        channel = channel,
-                                        onClick = { onSelectChannel(channel) },
-                                        onToggleFavorite = { onToggleFavorite(channel.id) }
-                                    )
-                                }
-                            }
-                            if (pair.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                } else {
-                    // Big Divs for Categories, Countries, and Languages
-
-                    // SECTION 1: Categories (Big Divs)
-                    item {
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = "Categories",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = primaryTextColor,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                        )
-
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                        ) {
-                            items(categories) { category ->
-                                BigCategoryCard(
-                                    category = category,
-                                    isDark = isDark,
-                                    dynamicCount = categoryCounts[category.name.lowercase(java.util.Locale.ROOT)],
+                            items(exploreCategories.take(10), key = { it.name }) { catMeta ->
+                                ExploreCategoryTile(
+                                    meta = catMeta,
                                     onClick = {
                                         onSelectGroup(
                                             SelectedGroup(
                                                 type = GroupType.CATEGORY,
-                                                title = category.name,
-                                                identifier = category.name
+                                                title = catMeta.name,
+                                                identifier = catMeta.name
                                             )
                                         )
                                     }
@@ -735,763 +457,193 @@ fun ExploreScreen(
                         }
                     }
 
-                    // SECTION 2: Countries (Big Divs with "See All" at the end - Requirement 13)
+                    // Countries Section with "See all"
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Countries",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = primaryTextColor
-                            )
-                            Text(
-                                text = "See all (${countries.size})",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = StreamViolet,
-                                modifier = Modifier.clickable { subView = ExploreSubView.ALL_COUNTRIES }
-                            )
-                        }
-
-                        val visibleCountries = countries.take(12)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        MobiSectionHeader(
+                            title = "Countries",
+                            actionText = "See all",
+                            onActionClick = { showAllCountries = true }
+                        )
                         LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(visibleCountries) { country ->
-                                BigCountryCard(
-                                    country = country,
-                                    isDark = isDark,
-                                    dynamicCount = countryCounts[country.code.lowercase(java.util.Locale.ROOT)] ?: countryCounts[country.name.lowercase(java.util.Locale.ROOT)],
+                            items(exploreCountries.take(12), key = { it.first }) { (cc, name) ->
+                                MobiChip(
+                                    label = name,
+                                    leadingGlyph = getCountryFlag(cc),
+                                    selected = false,
                                     onClick = {
                                         onSelectGroup(
                                             SelectedGroup(
                                                 type = GroupType.COUNTRY,
-                                                title = "${country.flag} ${country.name}",
-                                                identifier = country.code
+                                                title = "${getCountryFlag(cc)} $name",
+                                                identifier = cc
                                             )
                                         )
                                     }
                                 )
                             }
-
-                            // "See all" card at the end
-                            item {
-                                SeeAllCard(
-                                    title = "All Countries",
-                                    subtitle = "${countries.size} countries (A-Z)",
-                                    icon = Icons.Default.Public,
-                                    isDark = isDark,
-                                    onClick = { subView = ExploreSubView.ALL_COUNTRIES }
-                                )
-                            }
                         }
                     }
 
-                    // SECTION 3: Languages (Big Divs with Indian & Punjabi on top and "See All" at the end - Requirement 12)
+                    // Languages Section with "See all"
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Languages",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = primaryTextColor
-                            )
-                            Text(
-                                text = "See all (${languages.size})",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = StreamViolet,
-                                modifier = Modifier.clickable { subView = ExploreSubView.ALL_LANGUAGES }
-                            )
-                        }
-
-                        val visibleLanguages = languages.take(12)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        MobiSectionHeader(
+                            title = "Languages",
+                            actionText = "See all",
+                            onActionClick = { showAllLanguages = true }
+                        )
                         LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(visibleLanguages) { language ->
-                                BigLanguageCard(
-                                    language = language,
-                                    isDark = isDark,
-                                    dynamicCount = languageCounts[language.name],
+                            items(exploreLanguages.take(12)) { lang ->
+                                MobiChip(
+                                    label = lang,
+                                    leadingGlyph = getLanguageGlyph(lang),
+                                    selected = false,
                                     onClick = {
                                         onSelectGroup(
                                             SelectedGroup(
                                                 type = GroupType.LANGUAGE,
-                                                title = "${language.name} Channels",
-                                                identifier = language.name
+                                                title = "$lang Channels",
+                                                identifier = lang
                                             )
                                         )
                                     }
-                                )
-                            }
-
-                            // "See all" card at the end
-                            item {
-                                SeeAllCard(
-                                    title = "All Languages",
-                                    subtitle = "${languages.size} languages",
-                                    icon = Icons.Default.Language,
-                                    isDark = isDark,
-                                    onClick = { subView = ExploreSubView.ALL_LANGUAGES }
                                 )
                             }
                         }
                     }
                 }
             }
+
+            // 4. Channel List Section (either drilldown, search results, or all channels preview)
+            if (!showAllCategories && !showAllCountries && !showAllLanguages) {
+                val listHeader = when {
+                    selectedGroup != null -> "${selectedGroup.title} (${groupFilteredChannels.size})"
+                    searchQuery.isNotBlank() -> "Search Results (${groupFilteredChannels.size})"
+                    else -> "All Channels (${groupFilteredChannels.size})"
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    MobiSectionHeader(
+                        title = listHeader,
+                        actionText = if (selectedGroup != null) "Clear" else null,
+                        onActionClick = { onSelectGroup(null) }
+                    )
+                }
+
+                items(groupFilteredChannels, key = { it.id }) { channel ->
+                    ChannelListItem(
+                        channel = channel,
+                        onClick = { onSelectChannel(channel) },
+                        onToggleFavorite = { onToggleFavorite(channel.id) }
+                    )
+                }
+            }
         }
     }
 }
 
-/**
- * See All Card for Countries and Languages rows
- */
 @Composable
-fun SeeAllCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    isDark: Boolean,
+private fun ExploreCategoryTile(
+    meta: ExploreCategoryCardMeta,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val cardShape = RoundedCornerShape(20.dp)
+    val mobi = MaterialTheme.mobiColors
+    val baseColor = mobi.channelTileColors[abs(meta.name.hashCode()) % mobi.channelTileColors.size]
+    val tileBrush = Brush.linearGradient(
+        colors = listOf(baseColor, mobi.heroGradientEnd)
+    )
 
-    Column(
+    Box(
         modifier = modifier
-            .width(155.dp)
+            .size(width = 152.dp, height = 104.dp)
+            .clip(MobiCardShape)
+            .background(tileBrush)
             .clickable { onClick() }
-            .testTag("see_all_card_${title.lowercase().replace(" ", "_")}"),
-        horizontalAlignment = Alignment.Start
+            .padding(14.dp)
+            .testTag("category_card_${meta.name}")
     ) {
-        Box(
-            modifier = Modifier
-                .size(155.dp)
-                .clip(cardShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            if (isDark) Color(0xFF381F6F) else Color(0xFFE9E5FC),
-                            if (isDark) Color(0xFF1E1045) else Color(0xFFF5F3FF)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    color = StreamViolet.copy(alpha = 0.5f),
-                    shape = cardShape
-                )
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(StreamViolet),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = "View All",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = if (isDark) Color.White else TextDarkPrimary
-                )
-            }
-
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(StreamViolet),
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Open",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = title,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(
-            text = subtitle,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-/**
- * Big Category Card (styled with 155dp size like popular channels on homepage)
- */
-@Composable
-fun BigCategoryCard(
-    category: Category,
-    isDark: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    dynamicCount: Int? = null
-) {
-    val cardShape = RoundedCornerShape(20.dp)
-    val cardGradient = getCategoryGradient(category.name, isDark)
-
-    Column(
-        modifier = modifier
-            .width(155.dp)
-            .clickable { onClick() }
-            .testTag("big_category_card_${category.name.lowercase()}"),
-        horizontalAlignment = Alignment.Start
-    ) {
-        Box(
-            modifier = Modifier
-                .size(155.dp)
-                .clip(cardShape)
-                .background(cardGradient)
-                .border(
-                    width = 1.dp,
-                    color = if (isDark) Color(0xFF2C2266) else Color(0xFFE2E4EE),
-                    shape = cardShape
-                )
-        ) {
-            // Category Icon in center
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(if (isDark) Color(0x33FFFFFF) else Color(0x224F2BC4)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = getCategoryIcon(category.name),
+                    imageVector = meta.icon,
                     contentDescription = null,
-                    tint = if (isDark) Color.White else StreamViolet,
-                    modifier = Modifier.size(30.dp)
-                )
-            }
-
-            // Top Badge with "Category"
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(10.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF))
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = "CATEGORY",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp,
-                    color = if (isDark) GlowLilac else StreamViolet
-                )
-            }
-
-            // Signature Circular arrow button docked at bottom-right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFF19191B))
-                    .clickable { onClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Open",
                     tint = Color.White,
                     modifier = Modifier.size(18.dp)
                 )
             }
+
+            Column {
+                Text(
+                    text = meta.name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = meta.countHint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.80f),
+                    maxLines = 1
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = category.name,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        val count = dynamicCount ?: category.channelCount
-        Text(
-            text = if (count == 1) "1 channel" else if (count > 0) "$count channels" else "Live streams",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 
-/**
- * Big Country Card (155dp size with country flag and channel count)
- */
+@Preview(showBackground = true)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun BigCountryCard(
-    country: Country,
-    isDark: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    dynamicCount: Int? = null
-) {
-    val cardShape = RoundedCornerShape(20.dp)
-
-    Column(
-        modifier = modifier
-            .width(155.dp)
-            .clickable { onClick() }
-            .testTag("big_country_card_${country.code.lowercase()}"),
-        horizontalAlignment = Alignment.Start
-    ) {
-        Box(
-            modifier = Modifier
-                .size(155.dp)
-                .clip(cardShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            if (isDark) Color(0xFF241A5E) else Color(0xFFEFF0F9),
-                            if (isDark) Color(0xFF17113E) else Color(0xFFF7F8FD)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isDark) Color(0xFF2C2266) else Color(0xFFE2E4EE),
-                    shape = cardShape
-                )
-        ) {
-            // Big Flag in center
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(if (isDark) Color(0x22FFFFFF) else Color(0x33B7A6FF)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = country.flag,
-                    fontSize = 32.sp
-                )
-            }
-
-            // Top Badge with ISO code
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(10.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF))
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = country.code,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                    color = if (isDark) GlowLilac else StreamViolet
-                )
-            }
-
-            // Bottom Right Action
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFF19191B))
-                    .clickable { onClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Open",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = country.name,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+private fun ExploreScreenPreview() {
+    val sample = Channel(
+        id = "cnn",
+        name = "CNN International",
+        logoUrl = "",
+        streamUrl = "",
+        category = "News",
+        country = "United States",
+        countryCode = "US",
+        language = "English",
+        quality = "FHD",
+        isLive = true
+    )
+    MobiStreamTheme {
+        ExploreScreen(
+            allChannels = listOf(sample, sample.copy(id = "espn", name = "ESPN", category = "Sports")),
+            countryChannels = listOf(sample),
+            categories = listOf(Category("News", "News", channelCount = 320), Category("Sports", "Sports", channelCount = 210)),
+            countries = emptyList(),
+            languages = emptyList(),
+            detectedCountryName = "United States",
+            detectedCountryCode = "US",
+            filterOptions = FilterOptions(),
+            isDarkMode = false,
+            selectedGroup = null,
+            onSelectGroup = {},
+            sortCategoryChannels = { _, list -> list },
+            onSelectChannel = {},
+            onToggleFavorite = {},
+            onSearchQueryChange = {}
         )
-
-        val count = dynamicCount ?: country.channelCount
-        Text(
-            text = if (count == 1) "1 channel" else if (count > 0) "$count channels" else "Explore country",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-/**
- * Big Language Card (155dp size with language icon and channel count)
- */
-@Composable
-fun BigLanguageCard(
-    language: Language,
-    isDark: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    dynamicCount: Int? = null
-) {
-    val cardShape = RoundedCornerShape(20.dp)
-
-    Column(
-        modifier = modifier
-            .width(155.dp)
-            .clickable { onClick() }
-            .testTag("big_language_card_${language.name.lowercase()}"),
-        horizontalAlignment = Alignment.Start
-    ) {
-        Box(
-            modifier = Modifier
-                .size(155.dp)
-                .clip(cardShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            if (isDark) Color(0xFF2A1C5A) else Color(0xFFF3F1FD),
-                            if (isDark) Color(0xFF1E1446) else Color(0xFFFAF9FF)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isDark) Color(0xFF2C2266) else Color(0xFFE2E4EE),
-                    shape = cardShape
-                )
-        ) {
-            // Language Native Script Character Icon
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(if (isDark) Color(0x33FFFFFF) else Color(0x224F2BC4)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = getLanguageNativeCharacter(language.name, language.code),
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = if (isDark) GlowLilac else StreamViolet
-                )
-            }
-
-            // Top Badge with Lang Code
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(10.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isDark) Color(0x800E0A24) else Color(0xCCFFFFFF))
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = language.code.uppercase(),
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                    color = if (isDark) GlowLilac else StreamViolet
-                )
-            }
-
-            // Bottom Right Action
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFF19191B))
-                    .clickable { onClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Open",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = language.name,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        val count = dynamicCount ?: language.channelCount
-        Text(
-            text = if (count == 1) "1 channel" else if (count > 0) "$count channels" else "Explore language",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 12.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-private fun getCategoryGradient(name: String, isDark: Boolean): Brush {
-    val lower = name.lowercase()
-    return when {
-        lower.contains("sport") -> Brush.linearGradient(
-            listOf(
-                if (isDark) Color(0xFF6B1D2F) else Color(0xFFFFECEF),
-                if (isDark) Color(0xFF38101E) else Color(0xFFFFF5F7)
-            )
-        )
-        lower.contains("movie") || lower.contains("film") || lower.contains("series") -> Brush.linearGradient(
-            listOf(
-                if (isDark) Color(0xFF3D1F72) else Color(0xFFF3ECFF),
-                if (isDark) Color(0xFF221147) else Color(0xFFF9F5FF)
-            )
-        )
-        lower.contains("news") -> Brush.linearGradient(
-            listOf(
-                if (isDark) Color(0xFF1D3F75) else Color(0xFFEAF2FF),
-                if (isDark) Color(0xFF112348) else Color(0xFFF4F8FF)
-            )
-        )
-        lower.contains("music") -> Brush.linearGradient(
-            listOf(
-                if (isDark) Color(0xFF75401D) else Color(0xFFFFF2EA),
-                if (isDark) Color(0xFF42210E) else Color(0xFFFFF8F4)
-            )
-        )
-        lower.contains("kid") || lower.contains("animat") -> Brush.linearGradient(
-            listOf(
-                if (isDark) Color(0xFF1D6A42) else Color(0xFFEBFDF3),
-                if (isDark) Color(0xFF103A24) else Color(0xFFF4FEF8)
-            )
-        )
-        else -> Brush.linearGradient(
-            listOf(
-                if (isDark) Color(0xFF2C2266) else Color(0xFFF3F1FC),
-                if (isDark) Color(0xFF1E174A) else Color(0xFFFAF9FE)
-            )
-        )
-    }
-}
-
-private fun getCategoryIcon(name: String): ImageVector {
-    val lower = name.lowercase()
-    return when {
-        lower.contains("sport") -> Icons.Default.SportsSoccer
-        lower.contains("movie") || lower.contains("film") -> Icons.Default.Movie
-        lower.contains("series") -> Icons.Default.VideoLibrary
-        lower.contains("music") -> Icons.Default.MusicNote
-        lower.contains("news") -> Icons.Default.Tv
-        lower.contains("kid") || lower.contains("animat") -> Icons.Default.Face
-        lower.contains("comedy") -> Icons.Default.TheaterComedy
-        lower.contains("docu") -> Icons.Default.HistoryEdu
-        lower.contains("educat") -> Icons.Default.School
-        lower.contains("auto") || lower.contains("motor") -> Icons.Default.DirectionsCar
-        lower.contains("business") || lower.contains("econom") || lower.contains("finance") -> Icons.Default.BusinessCenter
-        lower.contains("cook") || lower.contains("food") -> Icons.Default.Restaurant
-        lower.contains("science") -> Icons.Default.Science
-        lower.contains("travel") -> Icons.Default.FlightTakeoff
-        lower.contains("weather") -> Icons.Default.WbSunny
-        lower.contains("tech") -> Icons.Default.Computer
-        lower.contains("shop") -> Icons.Default.ShoppingCart
-        lower.contains("relig") -> Icons.Default.SelfImprovement
-        lower.contains("family") -> Icons.Default.FamilyRestroom
-        lower.contains("outdoor") -> Icons.Default.Landscape
-        lower.contains("entertain") -> Icons.Default.LiveTv
-        else -> Icons.Default.Public
-    }
-}
-
-fun getLanguageNativeCharacter(name: String, code: String): String {
-    val n = name.lowercase(java.util.Locale.ROOT)
-    val c = code.lowercase(java.util.Locale.ROOT)
-    return when {
-        n.contains("punjabi") || n.contains("panjabi") || c == "pan" -> "ਅ"
-        n.contains("hindi") || c == "hin" -> "अ"
-        n.contains("english") || c == "eng" -> "Aa"
-        n.contains("urdu") || c == "urd" -> "ا"
-        n.contains("tamil") || c == "tam" -> "அ"
-        n.contains("telugu") || c == "tel" -> "అ"
-        n.contains("bengali") || n.contains("bangla") || c == "ben" -> "অ"
-        n.contains("malayalam") || c == "mal" -> "അ"
-        n.contains("kannada") || c == "kan" -> "ಅ"
-        n.contains("marathi") || c == "mar" -> "म"
-        n.contains("gujarati") || c == "guj" -> "ગુ"
-        n.contains("arabic") || c == "ara" -> "ض"
-        n.contains("chinese") || c in listOf("zho", "cmn", "chi") -> "文"
-        n.contains("japanese") || c == "jpn" -> "あ"
-        n.contains("korean") || c == "kor" -> "한"
-        n.contains("russian") || c == "rus" -> "Я"
-        n.contains("hebrew") || c == "heb" -> "א"
-        n.contains("greek") || c == "ell" -> "Ω"
-        n.contains("turkish") || c == "tur" -> "Tr"
-        n.contains("spanish") || c == "spa" -> "ñ"
-        n.contains("french") || c == "fra" -> "Fr"
-        n.contains("german") || c == "deu" -> "De"
-        n.contains("italian") || c == "ita" -> "It"
-        n.contains("portuguese") || c == "por" -> "Pt"
-        n.contains("thai") || c == "tha" -> "ไทย"
-        n.contains("vietnamese") || c == "vie" -> "Vi"
-        n.contains("persian") || n.contains("farsi") || c in listOf("fas", "per") -> "ف"
-        n.contains("indonesian") || c == "ind" -> "Id"
-        n.contains("polish") || c == "pol" -> "Pl"
-        n.contains("dutch") || c == "nld" -> "Nl"
-        n.contains("swedish") || c == "swe" -> "Sv"
-        else -> if (c.length >= 2) c.take(2).replaceFirstChar { it.uppercase() } else name.take(2)
-    }
-}
-
-private val NON_ALPHA_REGEX = Regex("[^a-zA-Z ]")
-
-fun isChannelMatchingGroup(channel: Channel, groupType: GroupType, identifier: String, title: String = ""): Boolean {
-    return when (groupType) {
-        GroupType.CATEGORY -> channel.category.equals(identifier, ignoreCase = true)
-        GroupType.COUNTRY -> {
-            channel.countryCode.equals(identifier, ignoreCase = true) ||
-                    (title.isNotBlank() && channel.country.contains(title.replace(NON_ALPHA_REGEX, "").trim(), ignoreCase = true)) ||
-                    channel.country.equals(identifier, ignoreCase = true)
-        }
-        GroupType.LANGUAGE -> {
-            val target = identifier.trim().lowercase(java.util.Locale.ROOT)
-            val titleClean = title.replace("Channels", "").replace(NON_ALPHA_REGEX, "").trim().lowercase(java.util.Locale.ROOT)
-            val chLang = channel.language.trim().lowercase(java.util.Locale.ROOT)
-            val chId = channel.id.lowercase(java.util.Locale.ROOT)
-
-            if (chLang.isNotEmpty() && (chLang == target || (titleClean.isNotEmpty() && chLang == titleClean))) return true
-
-            ((target in listOf("punjabi", "panjabi", "pan") || titleClean in listOf("punjabi", "panjabi", "pan")) &&
-                    (chLang in listOf("punjabi", "panjabi", "pan") || chId.contains("punjabi") || chId.contains(".pan@"))) ||
-            ((target in listOf("hindi", "hin") || titleClean in listOf("hindi", "hin")) &&
-                    (chLang in listOf("hindi", "hin") || chId.contains(".hin@"))) ||
-            ((target in listOf("english", "eng") || titleClean in listOf("english", "eng")) &&
-                    (chLang in listOf("english", "eng") || chId.contains(".eng@"))) ||
-            ((target in listOf("urdu", "urd") || titleClean in listOf("urdu", "urd")) &&
-                    (chLang in listOf("urdu", "urd") || chId.contains(".urd@"))) ||
-            ((target in listOf("tamil", "tam") || titleClean in listOf("tamil", "tam")) &&
-                    (chLang in listOf("tamil", "tam") || chId.contains(".tam@"))) ||
-            ((target in listOf("telugu", "tel") || titleClean in listOf("telugu", "tel")) &&
-                    (chLang in listOf("telugu", "tel") || chId.contains(".tel@"))) ||
-            ((target in listOf("bengali", "bangla", "ben") || titleClean in listOf("bengali", "bangla", "ben")) &&
-                    (chLang in listOf("bengali", "bangla", "ben") || chId.contains(".ben@"))) ||
-            ((target in listOf("malayalam", "mal") || titleClean in listOf("malayalam", "mal")) &&
-                    (chLang in listOf("malayalam", "mal") || chId.contains(".mal@"))) ||
-            ((target in listOf("kannada", "kan") || titleClean in listOf("kannada", "kan")) &&
-                    (chLang in listOf("kannada", "kan") || chId.contains(".kan@"))) ||
-            ((target in listOf("marathi", "mar") || titleClean in listOf("marathi", "mar")) &&
-                    (chLang in listOf("marathi", "mar") || chId.contains(".mar@"))) ||
-            ((target in listOf("gujarati", "guj") || titleClean in listOf("gujarati", "guj")) &&
-                    (chLang in listOf("gujarati", "guj") || chId.contains(".guj@"))) ||
-            ((target in listOf("spanish", "spa") || titleClean in listOf("spanish", "spa")) &&
-                    (chLang in listOf("spanish", "spa") || chId.contains(".spa@"))) ||
-            ((target in listOf("french", "fra") || titleClean in listOf("french", "fra")) &&
-                    (chLang in listOf("french", "fra") || chId.contains(".fra@"))) ||
-            ((target in listOf("arabic", "ara") || titleClean in listOf("arabic", "ara")) &&
-                    (chLang in listOf("arabic", "ara") || chId.contains(".ara@"))) ||
-            ((target in listOf("russian", "rus") || titleClean in listOf("russian", "rus")) &&
-                    (chLang in listOf("russian", "rus") || chId.contains(".rus@"))) ||
-            ((target in listOf("german", "deu") || titleClean in listOf("german", "deu")) &&
-                    (chLang in listOf("german", "deu") || chId.contains(".deu@"))) ||
-            (chLang.isNotEmpty() && target.isNotEmpty() && (chLang.contains(target) || target.contains(chLang)))
-        }
     }
 }

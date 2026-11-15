@@ -4,8 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,18 +31,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Payment
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -54,15 +53,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.GlowLilac
-import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.StreamViolet
-import com.example.ui.theme.TextDarkPrimary
-import com.example.ui.theme.TextDarkSecondary
+import com.example.ui.theme.MobiCardShape
+import com.example.ui.theme.MobiStreamTheme
+import com.example.ui.theme.mobiColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,296 +67,275 @@ fun UserInfoModal(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
+    val colors = MaterialTheme.colorScheme
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = null,
+        modifier = modifier.testTag("user_info_modal")
+    ) {
+        UserInfoModalContent(onDismiss = onDismiss)
+    }
+}
+
+@Composable
+fun UserInfoModalContent(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
+    val mobi = MaterialTheme.mobiColors
 
     val upiId = "8288909927@airtel"
     val developerName = "Arwinder Singh"
     val githubUrl = "https://github.com/malhi3296/"
     val paypalUrl = "https://paypal.me/malhi3296"
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null,
-        modifier = modifier.testTag("user_info_modal")
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header with Close
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(StreamViolet.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = StreamViolet,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Developer Profile",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = if (isDark) Color.White else TextDarkPrimary
-                    )
-                }
-
-                IconButton(onClick = onDismiss) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.secondaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = null,
+                        tint = colors.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Developer Profile",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.onSurface
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Developer Card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = if (isDark) Color(0xFF1E174A) else Color(0xFFF4F5FB)
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(48.dp)
             ) {
-                Column(
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = colors.onSurfaceVariant
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MobiCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                    contentDescription = developerName,
+                    modifier = Modifier.size(56.dp)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = developerName,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = colors.onSurface
+                )
+
+                Text(
+                    text = "Android & Jetpack Compose Developer",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = mobi.accentText
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                MobiButton(
+                    text = "GitHub Profile (@malhi3296)",
+                    trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
+                        context.startActivity(intent)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .testTag("github_link_button")
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                MobiButton(
+                    text = "Support via PayPal",
+                    style = MobiButtonStyle.TONAL,
+                    leadingIcon = Icons.Outlined.Payment,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(paypalUrl))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("paypal_link_button")
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Support / Donate via UPI",
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        MobiCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    modifier = Modifier.size(200.dp),
+                    shape = MobiCardShape,
+                    color = Color.White,
+                    border = BorderStroke(1.dp, colors.outline)
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_mobistream_symbol),
-                        contentDescription = developerName,
-                        modifier = Modifier.size(52.dp)
+                        painter = painterResource(id = R.drawable.upi_qr_code),
+                        contentDescription = "UPI Payment QR Code",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(10.dp)
                     )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = developerName,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = if (isDark) Color.White else TextDarkPrimary
-                    )
-
-                    Text(
-                        text = "Android & Jetpack Compose Developer",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 13.sp,
-                        color = if (isDark) GlowLilac else StreamViolet
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // GitHub Profile Button
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StreamViolet
-                        ),
-                        modifier = Modifier.fillMaxWidth().testTag("github_link_button")
-                    ) {
-                        Text(
-                            text = "GitHub Profile (@malhi3296)",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // PayPal Donation Button
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(paypalUrl))
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("paypal_link_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Payment,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Support via PayPal",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // UPI QR Code & Payment Section
-            Text(
-                text = "Support / Donate via UPI",
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = if (isDark) Color.White else TextDarkPrimary
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = if (isDark) Color(0xFF1E174A) else Color(0xFFF4F5FB)
-            ) {
-                Column(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("UPI ID", upiId)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "UPI ID copied: $upiId", Toast.LENGTH_SHORT).show()
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    color = colors.background,
+                    border = BorderStroke(1.dp, colors.outline)
                 ) {
-                    // QR Code image
-                    Box(
-                        modifier = Modifier
-                            .size(200.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White)
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.upi_qr_code),
-                            contentDescription = "UPI Payment QR Code",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // UPI ID with Copy Action
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isDark) Color(0xFF130E30) else Color(0xFFFFFFFF))
-                            .clickable {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText("UPI ID", upiId)
-                                clipboard.setPrimaryClip(clip)
-                                Toast.makeText(context, "UPI ID copied: $upiId", Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text(
                                 text = "UPI ID",
-                                fontFamily = InterFontFamily,
-                                fontSize = 11.sp,
-                                color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.onSurfaceVariant
                             )
                             Text(
                                 text = upiId,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = if (isDark) Color.White else TextDarkPrimary
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = colors.onSurface
                             )
                         }
 
                         Icon(
-                            imageVector = Icons.Default.ContentCopy,
+                            imageVector = Icons.Outlined.ContentCopy,
                             contentDescription = "Copy UPI ID",
-                            tint = StreamViolet,
-                            modifier = Modifier.size(18.dp)
+                            tint = colors.primary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // About App & Disclaimer
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = if (isDark) Color(0xFF1E174A) else Color(0xFFF4F5FB)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = StreamViolet,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "About MobiStream",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = if (isDark) Color.White else TextDarkPrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Version 1.0.5 (Build 105) • Streaming made mobile.",
-                        fontFamily = InterFontFamily,
-                        fontSize = 12.sp,
-                        color = if (isDark) GlowLilac else StreamViolet
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "This app does not host or stream any video content directly. It acts as a player for publicly available M3U playlists provided by the open-source iptv-org project.",
-                        fontFamily = InterFontFamily,
-                        fontSize = 11.sp,
-                        color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-                        lineHeight = 16.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        MobiCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = colors.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "About MobiStream",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colors.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Version 1.0.6 (Build 106) • Streaming made mobile.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = mobi.accentText
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "This app does not host or stream any video content directly. It acts as a player for publicly available M3U playlists provided by the open-source iptv-org project.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    lineHeight = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun UserInfoModalPreview() {
+    MobiStreamTheme {
+        UserInfoModalContent(onDismiss = {})
     }
 }

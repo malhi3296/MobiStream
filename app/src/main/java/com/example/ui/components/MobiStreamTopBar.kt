@@ -1,11 +1,13 @@
 package com.example.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,21 +37,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.GlowLilac
-import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.MidnightBackground
-import com.example.ui.theme.MidnightCard
-import com.example.ui.theme.StreamGradientStart
-import com.example.ui.theme.StreamViolet
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextWhite
+import com.example.ui.theme.MobiIconButtonShape
+import com.example.ui.theme.MobiSearchShape
+import com.example.ui.theme.MobiStreamTheme
+import com.example.ui.theme.mobiColors
 
 @Composable
 fun MobiStreamTopBar(
@@ -61,13 +59,14 @@ fun MobiStreamTopBar(
     hasActiveFilters: Boolean = false
 ) {
     var isSearchExpanded by remember { mutableStateOf(false) }
-    val isDark = MaterialTheme.colorScheme.background != Color.White
+    val colors = MaterialTheme.colorScheme
+    val mobi = MaterialTheme.mobiColors
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MidnightBackground)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(colors.background)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -79,46 +78,34 @@ fun MobiStreamTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.testTag("brand_header")
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isDark) Color(0xFF221A44) else Color(0xFFE8E5F7))
-                        .border(
-                            width = 1.dp,
-                            color = if (isDark) Color(0xFF382E66) else Color(0xFFD6D1EE),
-                            shape = RoundedCornerShape(8.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_mobistream_symbol),
-                        contentDescription = "MobiStream Logo",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                    contentDescription = "MobiStream Logo",
+                    modifier = Modifier.size(36.dp)
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
                         text = "MOBISTREAM",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 17.sp,
-                        letterSpacing = 1.8.sp,
-                        color = TextWhite
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.6.sp
+                        ),
+                        color = colors.onBackground
                     )
                     Text(
-                        text = "Streaming made mobile",
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 10.sp,
-                        color = TextMuted
+                        text = stringResource(id = R.string.tagline).removeSuffix("."),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.onSurfaceVariant
                     )
                 }
             }
 
-            // Actions: Search toggle & Filter button
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Actions: Search toggle & Filter button (borderless icons)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 IconButton(
                     onClick = {
                         isSearchExpanded = !isSearchExpanded
@@ -127,32 +114,28 @@ fun MobiStreamTopBar(
                         }
                     },
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(MidnightCard, CircleShape)
+                        .size(48.dp)
                         .testTag("search_toggle_button")
                 ) {
                     Icon(
                         imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
                         contentDescription = "Search channels",
-                        tint = if (isSearchExpanded) GlowLilac else Color.White,
-                        modifier = Modifier.size(20.dp)
+                        tint = if (isSearchExpanded) colors.primary else colors.onBackground,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
 
                 IconButton(
                     onClick = onFilterClick,
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(if (hasActiveFilters) StreamViolet else MidnightCard, CircleShape)
+                        .size(48.dp)
                         .testTag("filter_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.FilterList,
                         contentDescription = "Filter channels",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        tint = if (hasActiveFilters) colors.primary else colors.onBackground,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -171,16 +154,15 @@ fun MobiStreamTopBar(
                     placeholder = {
                         Text(
                             text = "Search 1000+ live channels, sports, news...",
-                            fontFamily = InterFontFamily,
-                            fontSize = 13.sp,
-                            color = TextMuted
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.onSurfaceVariant
                         )
                     },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = GlowLilac,
+                            tint = mobi.accentText,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -190,22 +172,22 @@ fun MobiStreamTopBar(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Clear search",
-                                    tint = TextMuted,
+                                    tint = colors.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = MobiSearchShape,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MidnightCard,
-                        unfocusedContainerColor = MidnightCard,
-                        focusedBorderColor = StreamGradientStart,
-                        unfocusedBorderColor = Color(0xFF2C2266),
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        cursorColor = GlowLilac
+                        focusedContainerColor = colors.surface,
+                        unfocusedContainerColor = colors.surface,
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.outline,
+                        focusedTextColor = colors.onSurface,
+                        unfocusedTextColor = colors.onSurface,
+                        cursorColor = colors.primary
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -213,6 +195,22 @@ fun MobiStreamTopBar(
                         .testTag("global_search_input")
                 )
             }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun MobiStreamTopBarPreview() {
+    MobiStreamTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            MobiStreamTopBar(
+                searchQuery = "",
+                onSearchQueryChange = {},
+                onFilterClick = {},
+                hasActiveFilters = true
+            )
         }
     }
 }

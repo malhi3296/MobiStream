@@ -1,49 +1,137 @@
 package com.example.ui.theme
 
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Brand Colors
-val StreamGradientStart = Color(0xFF9B6BFF)
-val StreamGradientEnd = Color(0xFF4F2BC4)
-val StreamViolet = Color(0xFF7B3FE4)
-val AppLightBackground = Color(0xFFD4D4D8)
-val AppDarkBackground = Color(0xFF3F3F46)
-val MidnightBackground = Color(0xFF3F3F46)
-val MidnightSurface = Color(0xFF27272A)
-val MidnightCard = Color(0xFF2E2E33)
-val MidnightCardBorder = Color(0xFF52525B)
-val GlowLilac = Color(0xFFB7A6FF)
-val CloudSurface = Color(0xFFE4E4E7)
-val CloudBackground = Color(0xFFD4D4D8)
-val LiveRed = Color(0xFFE5334B)
+// Dark theme tokens from tokens.json
+val DarkBg = Color(0xFF161C2A)
+val DarkSurface = Color(0xFF212B3D)
+val DarkBorder = Color(0xFF33415C)
+val DarkSelected = Color(0xFF1D3558)
+val DarkAccent = Color(0xFF3B9BF5)
+val DarkAccentText = Color(0xFF7FBFFF)
+val DarkText = Color(0xFFF1F5FB)
+val DarkMuted = Color(0xFFB8C3D6)
+val DarkOnAccent = Color(0xFF06152B)
+val DarkNav = Color(0xFF243049)
 
-// UI Tag Colors
-val TagLiveRed = Color(0xFFE5334B)
-val TagLiveTvBlue = Color(0xFF2B7FFF)
-val TagMoviesGreen = Color(0xFF10B981)
-val TagSeriesOrange = Color(0xFFF59E0B)
-val Tag4kPurple = Color(0xFF8B5CF6)
+// Light theme tokens from tokens.json
+val LightBg = Color(0xFFF6F9FE)
+val LightSurface = Color(0xFFFFFFFF)
+val LightBorder = Color(0xFFD3E2F4)
+val LightSelected = Color(0xFFE3F0FF)
+val LightAccent = Color(0xFF1473D6)
+val LightAccentText = Color(0xFF0B5CB5)
+val LightText = Color(0xFF0E2342)
+val LightMuted = Color(0xFF51627C)
+val LightOnAccent = Color(0xFFFFFFFF)
+val LightNav = Color(0xFFFFFFFF)
 
-// Text Colors
-val TextWhite = Color(0xFFFFFFFF)
-val TextMuted = Color(0xFFA19BD0)
-val TextDarkPrimary = Color(0xFF19191B)
-val TextDarkSecondary = Color(0xFF82828E)
-val CardLightBg = Color(0xFFF5F6FA)
-val BorderLight = Color(0xFFEEEEF4)
+// Shared tokens
+val LiveBadgeRed = Color(0xFFE0263F)
+val HeroBlueStart = Color(0xFF1E6FD9)
+val HeroBlueEnd = Color(0xFF0F2F5C)
 
-// Genre Orb Gradients
-val GenreSportsGradient = Brush.radialGradient(listOf(Color(0xFFFF5252), Color(0xFFFF7A7A), Color(0x33FF5252)))
-val GenreNewsGradient = Brush.radialGradient(listOf(Color(0xFF3867D6), Color(0xFF4B7BEC), Color(0x333867D6)))
-val GenreMoviesGradient = Brush.radialGradient(listOf(Color(0xFF8854D0), Color(0xFFA55EEA), Color(0x338854D0)))
-val GenreMusicGradient = Brush.radialGradient(listOf(Color(0xFFFA8231), Color(0xFFFD9644), Color(0x33FA8231)))
-val GenreKidsGradient = Brush.radialGradient(listOf(Color(0xFF20BF6B), Color(0xFF26DE81), Color(0x3320BF6B)))
-
-// Gradient Brushes
-val StreamPrimaryGradient = Brush.linearGradient(
-    colors = listOf(StreamGradientStart, StreamGradientEnd)
+val ChannelTilePalette = listOf(
+    Color(0xFF1E6FD9),
+    Color(0xFF0E7C86),
+    Color(0xFF3B5BDB),
+    Color(0xFF0B5FA5),
+    Color(0xFF2563EB),
+    Color(0xFF0F766E),
+    Color(0xFF4F46E5),
+    Color(0xFF0369A1),
+    Color(0xFF1D4ED8)
 )
-val StreamHeroGradient = Brush.verticalGradient(
-    colors = listOf(Color.Transparent, Color(0xCC0E0A24), MidnightBackground)
+
+@Immutable
+data class MobiColors(
+    val accentText: Color,
+    val navPill: Color,
+    val liveBadge: Color,
+    val heroGradientStart: Color,
+    val heroGradientEnd: Color,
+    val heroGradient: Brush,
+    val channelTileColors: List<Color>,
+    val isDark: Boolean
+)
+
+val DarkMobiColors = MobiColors(
+    accentText = DarkAccentText,
+    navPill = DarkNav,
+    liveBadge = LiveBadgeRed,
+    heroGradientStart = HeroBlueStart,
+    heroGradientEnd = HeroBlueEnd,
+    heroGradient = Brush.linearGradient(colors = listOf(HeroBlueStart, HeroBlueEnd)),
+    channelTileColors = ChannelTilePalette,
+    isDark = true
+)
+
+val LightMobiColors = MobiColors(
+    accentText = LightAccentText,
+    navPill = LightNav,
+    liveBadge = LiveBadgeRed,
+    heroGradientStart = HeroBlueStart,
+    heroGradientEnd = HeroBlueEnd,
+    heroGradient = Brush.linearGradient(colors = listOf(HeroBlueStart, HeroBlueEnd)),
+    channelTileColors = ChannelTilePalette,
+    isDark = false
+)
+
+val LocalMobiColors = staticCompositionLocalOf { DarkMobiColors }
+
+val DarkColorScheme = darkColorScheme(
+    primary = DarkAccent,
+    onPrimary = DarkOnAccent,
+    primaryContainer = DarkSelected,
+    onPrimaryContainer = DarkAccentText,
+    secondary = DarkAccent,
+    onSecondary = DarkOnAccent,
+    secondaryContainer = DarkSelected,
+    onSecondaryContainer = DarkText,
+    tertiary = LiveBadgeRed,
+    onTertiary = Color.White,
+    background = DarkBg,
+    onBackground = DarkText,
+    surface = DarkSurface,
+    onSurface = DarkText,
+    surfaceContainer = DarkSurface,
+    surfaceContainerLow = DarkBg,
+    surfaceContainerHigh = DarkSelected,
+    surfaceVariant = DarkSelected,
+    onSurfaceVariant = DarkMuted,
+    outline = DarkBorder,
+    outlineVariant = DarkBorder,
+    error = LiveBadgeRed,
+    onError = Color.White
+)
+
+val LightColorScheme = lightColorScheme(
+    primary = LightAccent,
+    onPrimary = LightOnAccent,
+    primaryContainer = LightSelected,
+    onPrimaryContainer = LightAccentText,
+    secondary = LightAccent,
+    onSecondary = LightOnAccent,
+    secondaryContainer = LightSelected,
+    onSecondaryContainer = LightText,
+    tertiary = LiveBadgeRed,
+    onTertiary = Color.White,
+    background = LightBg,
+    onBackground = LightText,
+    surface = LightSurface,
+    onSurface = LightText,
+    surfaceContainer = LightSurface,
+    surfaceContainerLow = LightBg,
+    surfaceContainerHigh = LightSelected,
+    surfaceVariant = LightSelected,
+    onSurfaceVariant = LightMuted,
+    outline = LightBorder,
+    outlineVariant = LightBorder,
+    error = LiveBadgeRed,
+    onError = Color.White
 )

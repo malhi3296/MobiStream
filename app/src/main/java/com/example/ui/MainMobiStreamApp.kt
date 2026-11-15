@@ -143,9 +143,10 @@ fun MainMobiStreamApp(
                 ScreenState.PLAYER -> {
                     val current = playingChannel
                     if (current != null) {
-                        val related = allChannels.filter { it.category == current.category }
+                        val syncedChannel = allChannels.find { it.id == current.id } ?: current
+                        val related = allChannels.filter { it.category == syncedChannel.category }
                         PlayerScreen(
-                            channel = current,
+                            channel = syncedChannel,
                             relatedChannels = related,
                             onBack = {
                                 // Returning from player retains exact channel list state in Explore
@@ -153,8 +154,8 @@ fun MainMobiStreamApp(
                             },
                             onToggleFavorite = { id ->
                                 viewModel.toggleFavorite(id)
-                                if (current.id == id) {
-                                    playingChannel = current.copy(isFavorite = !current.isFavorite)
+                                if (playingChannel?.id == id) {
+                                    playingChannel = syncedChannel.copy(isFavorite = !syncedChannel.isFavorite)
                                 }
                             },
                             onSelectChannel = { newChannel ->
@@ -192,24 +193,12 @@ fun MainMobiStreamApp(
                                 hasActiveFilters = uiState.filterOptions.hasActiveFilters
                             )
                         },
-                        bottomBar = {
-                            // Bottom Menubar with Home, Explore, Favourite, Profile
-                            MobiStreamBottomNav(
-                                currentDestination = currentDestination,
-                                onNavigate = { destination ->
-                                    if (screenState == ScreenState.SETTINGS_OVERLAY) {
-                                        screenState = ScreenState.MAIN
-                                    }
-                                    currentDestination = destination
-                                }
-                            )
-                        },
                         containerColor = MaterialTheme.colorScheme.background
                     ) { innerPadding ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(innerPadding)
+                                .padding(top = innerPadding.calculateTopPadding())
                         ) {
                             if (screenState == ScreenState.SETTINGS_OVERLAY) {
                                 SettingsScreen(
@@ -223,7 +212,8 @@ fun MainMobiStreamApp(
                                     onSetFavoriteCategories = { viewModel.setFavoriteCategories(it) },
                                     onExportBackupFile = { exportLauncher.launch("mobistream_backup.json") },
                                     onImportBackupFile = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
-                                    onClearCache = { viewModel.loadData(forceRefresh = true) }
+                                    onClearCache = { viewModel.loadData(forceRefresh = true) },
+                                    onOpenDeveloperProfile = { showUserInfoModal = true }
                                 )
                             } else {
                                 AnimatedContent(
@@ -268,6 +258,10 @@ fun MainMobiStreamApp(
                                                 },
                                                 onNavigateToSettings = {
                                                     screenState = ScreenState.SETTINGS_OVERLAY
+                                                },
+                                                onOpenFilter = { showFilterSheet = true },
+                                                onNavigateToFavorites = {
+                                                    currentDestination = NavDestination.FAVOURITE
                                                 }
                                             )
                                         }
@@ -294,7 +288,8 @@ fun MainMobiStreamApp(
                                                 onToggleFavorite = { id -> viewModel.toggleFavorite(id) },
                                                 onSearchQueryChange = { q -> viewModel.updateSearchQuery(q) },
                                                 onFetchLanguageChannels = viewModel::fetchLanguageChannels,
-                                                lastWatchedChannelId = uiState.lastWatchedChannelId
+                                                lastWatchedChannelId = uiState.lastWatchedChannelId,
+                                                onMenuClick = { showFilterSheet = true }
                                             )
                                         }
 
@@ -326,6 +321,18 @@ fun MainMobiStreamApp(
                                     }
                                 }
                             }
+
+                            // Floating pill bottom navigation overlaid cleanly so content scrolls underneath with 110.dp bottom padding
+                            MobiStreamBottomNav(
+                                currentDestination = currentDestination,
+                                onNavigate = { destination ->
+                                    if (screenState == ScreenState.SETTINGS_OVERLAY) {
+                                        screenState = ScreenState.MAIN
+                                    }
+                                    currentDestination = destination
+                                },
+                                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
+                            )
                         }
                     }
                 }

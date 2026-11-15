@@ -1,15 +1,9 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,57 +15,46 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.model.Channel
-import com.example.ui.theme.GlowLilac
-import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.LiveRed
-import com.example.ui.theme.StreamGradientStart
-import com.example.ui.theme.StreamViolet
-import com.example.ui.theme.TextDarkPrimary
-import com.example.ui.theme.TextDarkSecondary
+import com.example.ui.theme.MobiButtonShape
+import com.example.ui.theme.MobiCardShape
+import com.example.ui.theme.mobiColors
 import com.example.ui.viewmodel.SlideShowItem
 import kotlinx.coroutines.delay
 
 /**
- * Top Home Header matching Requirement 3:
- * "setting should be icon on top left with filter icon on right of it, just use logo and mobistream name"
+ * Legacy Home Header wrapper mapped to shared tokens without bordered icon boxes.
  */
 @Composable
 fun MobiStreamHomeHeader(
@@ -79,8 +62,7 @@ fun MobiStreamHomeHeader(
     onFilterClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-
+    val colors = MaterialTheme.colorScheme
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -88,74 +70,104 @@ fun MobiStreamHomeHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left Side: Setting icon and Filter icon right of it
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onSettingsClick,
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(if (isDark) Color(0xFF1E174A) else Color(0xFFF2F3F8))
+                    .size(48.dp)
                     .testTag("home_settings_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.Settings,
+                    imageVector = Icons.Outlined.Settings,
                     contentDescription = "Settings",
-                    tint = if (isDark) Color.White else TextDarkPrimary,
-                    modifier = Modifier.size(20.dp)
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
+            Spacer(modifier = Modifier.width(4.dp))
             IconButton(
                 onClick = onFilterClick,
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(if (isDark) Color(0xFF1E174A) else Color(0xFFF2F3F8))
+                    .size(48.dp)
                     .testTag("home_filter_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.Tune,
+                    imageVector = Icons.Outlined.Tune,
                     contentDescription = "Filters",
-                    tint = if (isDark) Color.White else TextDarkPrimary,
-                    modifier = Modifier.size(20.dp)
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
 
-        // Center / Brand: App Logo + MobiStream Name
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.testTag("header_brand")
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ic_mobistream_symbol),
+                painter = painterResource(id = R.drawable.ic_mobistream_logo),
                 contentDescription = "MobiStream Logo",
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier.size(32.dp)
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "MOBISTREAM",
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 17.sp,
-                letterSpacing = 1.8.sp,
-                color = if (isDark) Color.White else TextDarkPrimary
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.6.sp
+                ),
+                color = colors.onBackground
             )
         }
-
-        // Right side: LIVE pulse tag
-        StreamTagBadge(type = StreamTagType.LIVE)
     }
 }
 
 /**
- * Dynamic 5-Slide Hero Carousel matching Requirement 5:
- * Slide 1: News channel with current news program bg
- * Slide 2: Most important live sports event with action bg
- * Slide 3,4,5: Three random sliders with current program bg
+ * Shared SectionHeader alias delegating to MobiSectionHeader.
+ */
+@Composable
+fun SectionHeader(
+    title: String,
+    moreText: String? = "See all",
+    onSeeAllClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    MobiSectionHeader(
+        title = title,
+        actionText = moreText,
+        onActionClick = onSeeAllClick,
+        modifier = modifier
+    )
+}
+
+/**
+ * Shared SearchBar alias delegating to MobiSearchBar.
+ */
+@Composable
+fun StreamSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String = "Search 1000+ live channels, sports, news...",
+    onClick: (() -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    MobiSearchBar(
+        query = query,
+        onQueryChange = onQueryChange,
+        hint = placeholder,
+        onMenuClick = onMenuClick,
+        onBarClick = onClick,
+        modifier = modifier
+    )
+}
+
+/**
+ * Hero Banner Carousel:
+ * - Hero gradient #1E6FD9 -> #0F2F5C with crisp white text
+ * - LIVE badge (#E0263F) + channel logo badge in top-right
+ * - "Play Now" action button
+ * - Interactive HorizontalPager dots (thumb-scrollable + auto-rotate)
  */
 @Composable
 fun DynamicHeroSlideshow(
@@ -165,213 +177,198 @@ fun DynamicHeroSlideshow(
 ) {
     if (slides.isEmpty()) return
 
+    val mobi = MaterialTheme.mobiColors
     val pagerState = rememberPagerState(pageCount = { slides.size })
-    val cardShape = RoundedCornerShape(26.dp)
 
-    // Auto rotate slides every 6 seconds when user is not manually sliding with thumb
-    LaunchedEffect(pagerState, slides.size) {
-        while (true) {
-            delay(6000)
-            if (!pagerState.isScrollInProgress && slides.isNotEmpty()) {
-                val next = (pagerState.currentPage + 1) % slides.size
-                pagerState.animateScrollToPage(next)
-            }
-        }
+    LaunchedEffect(pagerState.currentPage) {
+        delay(5000)
+        val nextPage = (pagerState.currentPage + 1) % slides.size
+        pagerState.animateScrollToPage(nextPage)
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Requirement 4: Option to slide photos in slider with thumb via HorizontalPager
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(210.dp)
-                .padding(horizontal = 20.dp)
+                .height(216.dp)
+                .clip(MobiCardShape)
+                .testTag("hero_slideshow_pager")
         ) { page ->
             val slide = slides[page]
+            val channel = slide.channel
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(cardShape)
-                    .clickable { onSlideClick(slide.channel) }
-                    .testTag("hero_slideshow_card_$page")
+                    .background(mobi.heroGradient)
+                    .clickable { onSlideClick(channel) }
             ) {
-                // Background Base
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(slide.bgGradient)
-                )
-
-                // High-resolution authentic photo backdrop
                 if (slide.showImageUrl.isNotBlank()) {
                     AsyncImage(
                         model = slide.showImageUrl,
                         contentDescription = slide.programTitle,
                         contentScale = ContentScale.Crop,
+                        alpha = 0.35f,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
 
-                // If no show photo or alongside it, display channel logo
-                if (slide.showImageUrl.isBlank() && slide.channel.logoUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = slide.channel.logoUrl,
-                        contentDescription = slide.channel.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(36.dp)
-                    )
-                }
-
-                // Deep gradient scrim overlay so all texts are crisp and readable
+                // Blue hero gradient overlay guaranteeing white text readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0x66000000),
-                                    Color(0x33000000),
-                                    Color(0xF20E0A24)
+                                    mobi.heroGradientStart.copy(alpha = 0.55f),
+                                    mobi.heroGradientEnd.copy(alpha = 0.92f)
                                 )
                             )
                         )
                 )
 
-                // Top Left Tag Badge (BREAKING NEWS, LIVE SPORTS, etc.)
-                Box(
+                Column(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(slide.tagColor)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .fillMaxSize()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = slide.tagText,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = Color.White,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-
-                // Currently running program with show image thumbnail at bottom left
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(18.dp)
-                        .fillMaxWidth(0.78f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (slide.showImageUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = slide.showImageUrl,
-                            contentDescription = slide.programTitle,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                    } else if (slide.channel.logoUrl.isNotBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF3F3F46))
-                                .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
+                    // Top row: LIVE badge + category tag on left, channel logo on right
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            AsyncImage(
-                                model = slide.channel.logoUrl,
-                                contentDescription = slide.channel.name,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            LiveBadge(text = "LIVE")
+                            if (slide.tagText.isNotBlank() && !slide.tagText.equals("LIVE", ignoreCase = true)) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.White.copy(alpha = 0.18f))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = slide.tagText,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+
+                        ChannelLogoBox(
+                            channel = channel,
+                            compact = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .width(84.dp)
+                                .height(46.dp)
+                        )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    // Bottom content: Title, subtitle, Play Now button & page dots
+                    Column {
                         Text(
-                            text = slide.programTitle,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp,
+                            text = slide.programTitle.ifBlank { channel.name },
+                            style = MaterialTheme.typography.headlineMedium,
                             color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = slide.programSubtitle,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.5.sp,
-                            color = GlowLilac,
+                            text = slide.programSubtitle.ifBlank { "${channel.name} • ${channel.category}" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(MobiButtonShape)
+                                    .clickable { onSlideClick(channel) },
+                                shape = MobiButtonShape,
+                                color = Color.White
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Play Now",
+                                        tint = mobi.heroGradientEnd,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Play Now",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = mobi.heroGradientEnd
+                                    )
+                                }
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                slides.indices.forEach { index ->
+                                    val isCurrent = index == pagerState.currentPage
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = if (isCurrent) 20.dp else 6.dp, height = 6.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isCurrent) Color.White else Color.White.copy(alpha = 0.42f))
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-
-                // Circular Play Button docked at Bottom Right
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .size(50.dp)
-                        .shadow(8.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(StreamViolet),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play Now",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Thumb Pagination Indicator Pills showing slide position
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            slides.indices.forEach { index ->
-                val isSelected = index == pagerState.currentPage
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 3.dp)
-                        .size(width = if (isSelected) 22.dp else 6.dp, height = 5.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(
-                            if (isSelected) StreamViolet else Color.White.copy(alpha = 0.3f)
-                        )
-                )
             }
         }
     }
 }
 
 /**
- * Pinned & Favourites Channel Card matching Requirement 9:
- * Distinctive card with pin tag and quick pin/favorite actions
+ * Country Channel Card wrapper.
+ */
+@Composable
+fun CountryChannelCard(
+    channel: Channel,
+    onPlayClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HorizontalChannelCard(
+        channel = channel,
+        onClick = onPlayClick,
+        onToggleFavorite = onToggleFavorite,
+        modifier = modifier
+    )
+}
+
+/**
+ * Pinned & Favorites card with full-width logo box and pin button.
  */
 @Composable
 fun PinnedAndFavCard(
@@ -381,316 +378,74 @@ fun PinnedAndFavCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-    val cardShape = RoundedCornerShape(14.dp)
+    val colors = MaterialTheme.colorScheme
 
-    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
-    val subtleShadowBorder = if (channel.isPinned) Color(0xFFFFB300) else if (isDark) Color(0x2EFFFFFF) else Color(0x1F000000)
-
-    Column(
+    Surface(
         modifier = modifier
-            .width(115.dp)
+            .width(164.dp)
+            .height(148.dp)
+            .clip(MobiCardShape)
             .clickable { onClick() }
             .testTag("pinned_fav_card_${channel.id}"),
-        horizontalAlignment = Alignment.Start
+        shape = MobiCardShape,
+        color = colors.surface,
+        border = BorderStroke(1.dp, if (channel.isPinned) colors.primary else colors.outline)
     ) {
-        Box(
-            modifier = Modifier
-                .width(115.dp)
-                .height(85.dp)
-                .shadow(
-                    elevation = 2.dp,
-                    shape = cardShape,
-                    spotColor = if (isDark) Color(0x66000000) else Color(0x24000000),
-                    ambientColor = if (isDark) Color(0x40000000) else Color(0x14000000)
-                )
-                .border(
-                    width = 1.dp,
-                    color = subtleShadowBorder,
-                    shape = cardShape
-                )
-                .clip(cardShape)
-                .background(cardBg)
-        ) {
-            if (channel.logoUrl.isNotBlank()) {
-                AsyncImage(
-                    model = channel.logoUrl,
-                    contentDescription = channel.name,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp)
-                )
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Tv,
-                        contentDescription = null,
-                        tint = if (isDark) Color.White else TextDarkPrimary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            }
-
-            // Top Badges: PINNED or FAV badge
-            Row(
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(5.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(start = 8.dp, end = 8.dp, top = 8.dp)
             ) {
-                if (channel.isPinned) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFFFB300))
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.PushPin,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(8.dp)
-                            )
-                            Spacer(modifier = Modifier.width(1.dp))
-                            Text(
-                                text = "PIN",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 8.sp,
-                                color = Color.Black
-                            )
-                        }
-                    }
-                } else if (channel.isFavorite) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(LiveRed)
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = "FAV",
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 8.sp,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            // Pin toggle on top-right
-            IconButton(
-                onClick = onTogglePin,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(2.dp)
-                    .size(22.dp)
-            ) {
-                Icon(
-                    imageVector = if (channel.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                    contentDescription = "Pin channel",
-                    tint = if (channel.isPinned) Color(0xFFFFB300) else if (isDark) Color.White else TextDarkSecondary,
-                    modifier = Modifier.size(13.dp)
+                ChannelLogoBox(
+                    channel = channel,
+                    compact = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxSize()
                 )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = channel.name,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(
-            text = channel.category,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 10.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-/**
- * Localized Country Channel Card:
- * - Transparent logo tile background with NO overlay gradient
- * - Really subtle dropshadow as border
- * - Dark text in light mode, light text in dark mode
- * - Clean adaptive surface matching #D4D4D8 (light) and #3F3F46 (dark)
- */
-@Composable
-fun CountryChannelCard(
-    channel: Channel,
-    onPlayClick: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-    val cardShape = RoundedCornerShape(16.dp)
-
-    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
-    val subtleShadowBorder = if (isDark) Color(0x2EFFFFFF) else Color(0x1F000000)
-
-    Box(
-        modifier = modifier
-            .width(150.dp)
-            .height(165.dp)
-            .shadow(
-                elevation = 2.dp,
-                shape = cardShape,
-                spotColor = if (isDark) Color(0x66000000) else Color(0x24000000),
-                ambientColor = if (isDark) Color(0x40000000) else Color(0x14000000)
-            )
-            .border(width = 1.dp, color = subtleShadowBorder, shape = cardShape)
-            .clip(cardShape)
-            .background(cardBg)
-            .clickable { onPlayClick() }
-            .testTag("country_channel_card_${channel.id}")
-    ) {
-        // Logo in Center Upper: Transparent background with NO white box and NO gradient
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(110.dp)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            val resolvedLogo = com.example.domain.ChannelLogoResolver.resolve(channel.name, channel.logoUrl)
-
-            if (resolvedLogo.isNotBlank()) {
-                coil.compose.SubcomposeAsyncImage(
-                    model = resolvedLogo,
-                    contentDescription = channel.name,
-                    contentScale = ContentScale.Fit,
+                StreamTag(
+                    text = channel.category.ifBlank { "Live" }.take(10),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp),
-                    error = {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(CircleShape)
-                                .background(StreamViolet.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = channel.name.take(2).uppercase(),
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
-                                color = StreamViolet
-                            )
-                        }
-                    }
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
                 )
-            } else {
-                Box(
+
+                IconButton(
+                    onClick = onTogglePin,
                     modifier = Modifier
-                        .size(46.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
-                        .background(StreamViolet.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                        .background(colors.surface.copy(alpha = 0.85f))
                 ) {
-                    Text(
-                        text = channel.name.take(2).uppercase(),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
-                        color = StreamViolet
+                    Icon(
+                        imageVector = if (channel.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        contentDescription = "Pin channel",
+                        tint = if (channel.isPinned) colors.primary else colors.onSurface,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
-        }
 
-        // Top Right Favorite Button
-        IconButton(
-            onClick = onToggleFavorite,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(6.dp)
-                .size(30.dp)
-                .background(
-                    if (isDark) Color(0x4D000000) else Color(0x14000000),
-                    CircleShape
-                )
-        ) {
-            Icon(
-                imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = "Favorite",
-                tint = if (channel.isFavorite) LiveRed else if (isDark) Color.White.copy(alpha = 0.85f) else TextDarkSecondary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        // Bottom Info: Clean transparent container with NO overlay gradient
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 9.dp, vertical = 7.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = channel.name,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.5.sp,
-                    color = if (isDark) Color.White else TextDarkPrimary,
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                    color = colors.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(StreamViolet.copy(alpha = 0.15f))
-                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = channel.category,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 9.sp,
-                        color = if (isDark) GlowLilac else Color(0xFF6D28D9)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
                 Text(
-                    text = getCountryFlag(channel.countryCode),
-                    fontSize = 10.sp
-                )
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(
-                    text = channel.country.uppercase(),
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 9.sp,
-                    color = if (isDark) Color(0xFFA1A1AA) else TextDarkSecondary,
+                    text = "${getCountryFlag(channel.countryCode)} ${channel.country.ifBlank { channel.countryCode }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -700,47 +455,7 @@ fun CountryChannelCard(
 }
 
 /**
- * Section Header with Title on Left and "See all" on Right
- */
-@Composable
-fun SectionHeader(
-    title: String,
-    onSeeAllClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            color = if (isDark) Color.White else TextDarkPrimary
-        )
-
-        Text(
-            text = "See all",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 13.sp,
-            color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-            modifier = Modifier
-                .clickable { onSeeAllClick() }
-                .padding(4.dp)
-                .testTag("see_all_${title.lowercase().replace(" ", "_")}")
-        )
-    }
-}
-
-/**
- * Trending Stream List Item
+ * TrendingStreamItem preserved for SearchScreen and Explore compatibility.
  */
 @Composable
 fun TrendingStreamItem(
@@ -749,126 +464,25 @@ fun TrendingStreamItem(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 7.dp)
-            .testTag("trending_item_${channel.id}"),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(if (isDark) Color(0xFF1E174A) else Color(0xFFF2F3F8)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (channel.logoUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = channel.logoUrl,
-                        contentDescription = channel.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Tv,
-                        contentDescription = null,
-                        tint = if (isDark) Color.White else TextDarkPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(
-                    text = channel.name,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = if (isDark) Color.White else TextDarkPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "${getCountryFlag(channel.countryCode)} ${channel.country} • ${channel.category}",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    color = if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        IconButton(onClick = onToggleFavorite) {
-            Icon(
-                imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = "Favorite",
-                tint = if (channel.isFavorite) LiveRed else if (isDark) Color(0xFFA19BD0) else TextDarkSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
+    ChannelTile(
+        channel = channel,
+        onClick = onClick,
+        onToggleFavorite = onToggleFavorite,
+        showLiveBadge = true,
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
 }
 
 /**
- * Genre Glowing Bubble
+ * Converts 2-letter ISO country code into real Unicode Country Flag emoji.
  */
-@Composable
-fun GenreGlowingBubble(
-    label: String,
-    gradient: Brush,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-
-    Column(
-        modifier = modifier
-            .width(82.dp)
-            .clickable { onClick() }
-            .testTag("genre_bubble_${label.lowercase()}"),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(CircleShape)
-                .background(gradient),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = label.uppercase(),
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = label,
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
-            color = if (isDark) Color.White else TextDarkPrimary,
-            textAlign = TextAlign.Center
-        )
+fun getCountryFlag(countryCode: String): String {
+    var clean = countryCode.trim().uppercase()
+    if (clean == "UK") clean = "GB"
+    if (clean.length != 2 || !clean[0].isLetter() || !clean[1].isLetter()) {
+        return "\uD83C\uDF10" // Globe emoji fallback
     }
+    val firstChar = Character.codePointAt(clean, 0) - 0x41 + 0x1F1E6
+    val secondChar = Character.codePointAt(clean, 1) - 0x41 + 0x1F1E6
+    return String(Character.toChars(firstChar)) + String(Character.toChars(secondChar))
 }

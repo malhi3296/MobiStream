@@ -1,7 +1,7 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,200 +28,160 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.data.model.Channel
-import com.example.ui.theme.GlowLilac
-import com.example.ui.theme.InterFontFamily
-import com.example.ui.theme.LiveRed
-import com.example.ui.theme.StreamViolet
-import com.example.ui.theme.TextDarkPrimary
-import com.example.ui.theme.TextDarkSecondary
+import com.example.ui.theme.MobiCardShape
+import com.example.ui.theme.mobiColors
 
 /**
- * Modern Stream Channel Card:
- * - Transparent logo tile background with NO overlay gradient
- * - Really subtle dropshadow as border
- * - Dark text in light mode, light text in dark mode
- * - Clean adaptive surface matching #D4D4D8 (light) and #3F3F46 (dark)
+ * Tonal category / status pill tag.
  */
 @Composable
-fun ChannelCard(
+fun StreamTag(
+    text: String,
+    isLive: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val mobi = MaterialTheme.mobiColors
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isLive) mobi.liveBadge else colors.secondaryContainer.copy(alpha = 0.94f))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = if (isLive) Color.White else colors.onSecondaryContainer,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * Channel List Item preserving existing call sites, backed by shared ChannelTile design.
+ */
+@Composable
+fun ChannelListItem(
     channel: Channel,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.background == Color(0xFF3F3F46)
-    val cardShape = RoundedCornerShape(16.dp)
+    ChannelTile(
+        channel = channel,
+        onClick = onClick,
+        onToggleFavorite = onToggleFavorite,
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        showLiveBadge = channel.isLive
+    )
+}
 
-    // Clean solid background for card, matching user specifications
-    val cardBg = if (isDark) Color(0xFF27272A) else Color(0xFFE4E4E7)
-    val subtleShadowBorder = if (isDark) Color(0x33FFFFFF) else Color(0x1F000000)
+/**
+ * Horizontal Channel Card (used in Home horizontal carousels and Related Live Channels).
+ * Features a full-width top logo frame that works across Dark and Light themes.
+ */
+@Composable
+fun HorizontalChannelCard(
+    channel: Channel,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val mobi = MaterialTheme.mobiColors
 
     Surface(
         modifier = modifier
-            .testTag("channel_card_${channel.id}")
-            .shadow(
-                elevation = 2.dp,
-                shape = cardShape,
-                spotColor = if (isDark) Color(0x66000000) else Color(0x26000000),
-                ambientColor = if (isDark) Color(0x40000000) else Color(0x14000000)
-            )
-            .border(width = 1.dp, color = subtleShadowBorder, shape = cardShape)
-            .clip(cardShape)
-            .clickable { onClick() },
-        shape = cardShape,
-        color = cardBg
+            .width(198.dp)
+            .height(166.dp)
+            .clip(MobiCardShape)
+            .clickable { onClick() }
+            .testTag("horizontal_channel_card_${channel.id}"),
+        shape = MobiCardShape,
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.outline)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(170.dp)
-        ) {
-            // Main Logo Area: Transparent background with NO white box and NO gradient
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Full-width Logo showcase container
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(115.dp)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .padding(start = 8.dp, end = 8.dp, top = 8.dp)
             ) {
-                val resolvedLogo = com.example.domain.ChannelLogoResolver.resolve(channel.name, channel.logoUrl)
-                if (resolvedLogo.isNotBlank()) {
-                    coil.compose.SubcomposeAsyncImage(
-                        model = resolvedLogo,
-                        contentDescription = "${channel.name} logo",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp),
-                        error = {
-                            Box(
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(StreamViolet.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = channel.name.take(2).uppercase(),
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 17.sp,
-                                    color = StreamViolet
-                                )
-                            }
-                        }
-                    )
-                } else {
+                ChannelLogoBox(
+                    channel = channel,
+                    compact = false,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // TopStart: Category pill
+                StreamTag(
+                    text = channel.category.ifBlank { "Live" },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                )
+
+                // TopEnd: 48dp accessible Favorite button
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(48.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(50.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(StreamViolet.copy(alpha = 0.15f)),
+                            .background(colors.surface.copy(alpha = 0.86f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = channel.name.take(2).uppercase(),
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp,
-                            color = StreamViolet
+                        Icon(
+                            imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (channel.isFavorite) "Remove from Favorites" else "Add to Favorites",
+                            tint = if (channel.isFavorite) mobi.liveBadge else colors.onSurface,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
 
-            // Top-Right Favorite Button with subtle translucent background
-            IconButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .size(32.dp)
-                    .background(
-                        if (isDark) Color(0x4D000000) else Color(0x14000000),
-                        CircleShape
-                    )
-                    .testTag("fav_button_${channel.id}")
-            ) {
-                Icon(
-                    imageVector = if (channel.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (channel.isFavorite) "Remove favorite" else "Add favorite",
-                    tint = if (channel.isFavorite) LiveRed else if (isDark) Color.White.copy(alpha = 0.85f) else TextDarkSecondary,
-                    modifier = Modifier.size(17.dp)
-                )
-            }
-
-            // Bottom Info Overlay: Clean transparent container with NO overlay gradient
+            // Bottom: Channel Name + Flag & Country
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
-                // Line 1: Channel Name (dark in light mode, light in dark mode) + Category Pill
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = channel.name,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp,
-                        color = if (isDark) Color.White else TextDarkPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    // Category Pill Tag
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(StreamViolet.copy(alpha = 0.15f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = channel.category,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 9.5.sp,
-                            color = if (isDark) GlowLilac else Color(0xFF6D28D9)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(3.dp))
-
-                // Line 2: Flag + uppercase Country Name (adaptive dark/light)
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = getCountryFlag(channel.countryCode),
-                        fontSize = 11.sp
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = channel.country.uppercase(),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 10.sp,
-                        color = if (isDark) Color(0xFFA1A1AA) else TextDarkSecondary,
+                        text = channel.country.ifBlank { channel.countryCode },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -232,13 +191,29 @@ fun ChannelCard(
     }
 }
 
-fun getCountryFlag(countryCode: String): String {
-    if (countryCode.length != 2) return "🌐"
-    val firstChar = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6
-    val secondChar = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6
-    return if (firstChar in 0x1F1E6..0x1F1FF && secondChar in 0x1F1E6..0x1F1FF) {
-        String(Character.toChars(firstChar)) + String(Character.toChars(secondChar))
-    } else {
-        "🌐"
+/**
+ * Standard compact grid/carousel ChannelCard preserving existing public signature.
+ */
+@Composable
+fun ChannelCard(
+    channel: Channel,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HorizontalChannelCard(
+        channel = channel,
+        onClick = onClick,
+        onToggleFavorite = onToggleFavorite,
+        modifier = modifier
+    )
+}
+
+fun getTwoLetterInitials(name: String): String {
+    val parts = name.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
+    return when {
+        parts.size >= 2 -> "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
+        parts.size == 1 -> parts[0].take(2).uppercase()
+        else -> "TV"
     }
 }

@@ -9,38 +9,22 @@ object ChannelLogoResolver {
      * Fixes broken GitHub/epg URLs or missing logos in iptv-org playlists.
      */
     fun resolve(channelName: String, rawLogoUrl: String): String {
-        // If the URL is already valid and not from broken raw.githubusercontent.com/iptv-org/epg
         val trimmed = rawLogoUrl.trim()
         val isBrokenGithub = trimmed.contains("raw.githubusercontent.com/iptv-org/epg") ||
-                trimmed.contains("raw.githubusercontent.com") && trimmed.contains("/logos/")
+                (trimmed.contains("raw.githubusercontent.com") && trimmed.contains("/logos/")) ||
+                trimmed.contains("xstreamcp-assets-msp.streamready.in") ||
+                trimmed.contains("jiotvimages.cdn.jio.com")
+
+        if (trimmed.isNotBlank() && !isBrokenGithub && (trimmed.startsWith("https://") || trimmed.startsWith("http://"))) {
+            return trimmed
+        }
 
         val nameLower = channelName.lowercase(Locale.ROOT)
 
-        // Known priority channel overrides
+        // Known priority channel overrides when playlist logo is absent or broken
         val verifiedUrl = when {
-            nameLower.contains("9x") || nameLower.contains("tashan") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_9X_TASHAN/images/LOGO_HD/image.png"
-
-            nameLower.contains("abp sanjha") || nameLower.contains("sanjha") ->
-                "https://jiotvimages.cdn.jio.com/dare_images/images/ABP_Sanjha.png"
-
             nameLower.contains("aaj tak") ->
                 "https://upload.wikimedia.org/wikipedia/commons/2/28/Aaj_tak_logo.png"
-
-            nameLower.contains("ptc news") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_PTC_NEWS/images/LOGO_HD/image.png"
-
-            nameLower.contains("ptc punjabi") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_PTC_PUNJABI/images/LOGO_HD/image.png"
-
-            nameLower.contains("ptc chakde") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_PTC_CHAKDE/images/LOGO_HD/image.png"
-
-            nameLower.contains("ptc music") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_PTC_MUSIC/images/LOGO_HD/image.png"
-
-            nameLower.contains("chardikla") || nameLower.contains("time tv") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_CHARDIKLA_TIME_TV/images/LOGO_HD/image.png"
 
             nameLower.contains("dd news") ->
                 "https://ltsk-cdn.s3.eu-west-1.amazonaws.com/jumpstart/Temp_Live/cdn/HLS/Channel/transparentImages/DD%20News%20HD.png"
@@ -81,23 +65,9 @@ object ChannelLogoResolver {
             nameLower.contains("al jazeera") ->
                 "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Aljazeera_eng.svg/512px-Aljazeera_eng.svg.png"
 
-            nameLower.contains("&tv") || nameLower.contains("andtv") ->
-                "https://xstreamcp-assets-msp.streamready.in/assets/LIVETV/LIVECHANNEL/LIVETV_LIVETVCHANNEL_SYMANDTV/images/LOGO_HD/LOGO_HD_image.png"
-
-            nameLower.contains("india today") ->
-                "https://jiotvimages.cdn.jio.com/dare_images/images/India_Today.png"
-
             else -> null
         }
 
-        if (verifiedUrl != null) {
-            return verifiedUrl
-        }
-
-        if (isBrokenGithub || trimmed.isBlank()) {
-            return ""
-        }
-
-        return trimmed
+        return verifiedUrl ?: ""
     }
 }

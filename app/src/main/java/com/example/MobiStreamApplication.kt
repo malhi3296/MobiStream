@@ -19,7 +19,17 @@ class MobiStreamApplication : Application(), ImageLoaderFactory {
     }
 
     override fun newImageLoader(): ImageLoader {
+        val okHttpClient = okhttp3.OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "MobiStream/1.0.6 (Android; IPTV Player)")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+
         return ImageLoader.Builder(this)
+            .okHttpClient(okHttpClient)
             .components {
                 add(SvgDecoder.Factory())
             }

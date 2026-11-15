@@ -1,62 +1,28 @@
 package com.example.ui.theme
 
 import android.app.Activity
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF19191B),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFF3F4F8),
-    onPrimaryContainer = Color(0xFF19191B),
-    secondary = StreamViolet,
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEFEFF6),
-    onSecondaryContainer = Color(0xFF19191B),
-    tertiary = TagLiveRed,
-    onTertiary = Color.White,
-    background = AppLightBackground,
-    onBackground = TextDarkPrimary,
-    surface = AppLightBackground,
-    onSurface = TextDarkPrimary,
-    surfaceVariant = Color(0xFFE4E4E7),
-    onSurfaceVariant = TextDarkSecondary,
-    outline = Color(0xFFA1A1AA)
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = StreamViolet,
-    onPrimary = TextWhite,
-    primaryContainer = MidnightCard,
-    onPrimaryContainer = GlowLilac,
-    secondary = GlowLilac,
-    onSecondary = AppDarkBackground,
-    secondaryContainer = MidnightCardBorder,
-    onSecondaryContainer = TextWhite,
-    tertiary = TagLiveRed,
-    onTertiary = TextWhite,
-    background = AppDarkBackground,
-    onBackground = TextWhite,
-    surface = AppDarkBackground,
-    onSurface = TextWhite,
-    surfaceVariant = MidnightCard,
-    onSurfaceVariant = TextMuted,
-    outline = MidnightCardBorder
-)
+val MaterialTheme.mobiColors: MobiColors
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalMobiColors.current
 
 @Composable
 fun MobiStreamTheme(
-    darkTheme: Boolean = false, // Clean white aesthetic from user UI mockup
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val mobiColors = if (darkTheme) DarkMobiColors else LightMobiColors
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -72,9 +38,12 @@ fun MobiStreamTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalMobiColors provides mobiColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            shapes = MobiShapes,
+            typography = AppTypography,
+            content = content
+        )
+    }
 }

@@ -1,5 +1,6 @@
 package com.example.ui.screens.splash
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -7,11 +8,20 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -24,38 +34,36 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.MidnightBackground
-import com.example.ui.theme.StreamGradientEnd
-import com.example.ui.theme.StreamGradientStart
+import com.example.ui.theme.MobiStreamTheme
 import kotlinx.coroutines.delay
 
-/**
- * Minimalist, high-end Splash Screen featuring solely the centered MobiStream app logo
- * with a soft violet pulse glow on Midnight Background.
- */
 @Composable
 fun SplashScreen(
     isLoading: Boolean,
     onSplashFinished: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scale = remember { Animatable(0.75f) }
+    val scale = remember { Animatable(0.82f) }
     val alpha = remember { Animatable(0f) }
-    val glowAlpha = remember { Animatable(0.25f) }
+    val glowAlpha = remember { Animatable(0.22f) }
 
     LaunchedEffect(Unit) {
         scale.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
         )
         alpha.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 600)
+            animationSpec = tween(durationMillis = 550)
         )
         glowAlpha.animateTo(
-            targetValue = 0.65f,
+            targetValue = 0.55f,
             animationSpec = infiniteRepeatable(
                 animation = tween(1200, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse
@@ -70,39 +78,99 @@ fun SplashScreen(
         }
     }
 
+    SplashScreenContent(
+        scale = scale.value,
+        alpha = alpha.value,
+        glowAlpha = glowAlpha.value,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun SplashScreenContent(
+    scale: Float = 1f,
+    alpha: Float = 1f,
+    glowAlpha: Float = 0.4f,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MidnightBackground)
+            .background(colors.background)
             .testTag("splash_screen"),
         contentAlignment = Alignment.Center
     ) {
-        // Soft violet ambient glow behind logo
         Box(
             modifier = Modifier
-                .size(240.dp)
-                .alpha(glowAlpha.value)
+                .size(260.dp)
+                .alpha(glowAlpha)
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            StreamGradientStart.copy(alpha = 0.55f),
-                            StreamGradientEnd.copy(alpha = 0.25f),
+                            colors.primary.copy(alpha = 0.35f),
+                            colors.primary.copy(alpha = 0.12f),
                             Color.Transparent
                         )
                     )
                 )
         )
 
-        // Only App Logo with smooth scale and entrance (clean symbol, no white box)
-        Image(
-            painter = painterResource(id = R.drawable.ic_mobistream_symbol),
-            contentDescription = "MobiStream Logo",
-            modifier = Modifier
-                .size(130.dp)
-                .scale(scale.value)
-                .alpha(alpha.value)
-                .testTag("splash_logo")
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_mobistream_logo),
+                contentDescription = "MobiStream Logo",
+                modifier = Modifier
+                    .size(116.dp)
+                    .scale(scale)
+                    .alpha(alpha)
+                    .testTag("splash_logo")
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "MOBISTREAM",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.4.sp
+                ),
+                color = colors.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = stringResource(id = R.string.tagline).removeSuffix("."),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+                color = colors.primary,
+                trackColor = colors.outline
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SplashScreenPreview() {
+    MobiStreamTheme {
+        SplashScreenContent()
     }
 }

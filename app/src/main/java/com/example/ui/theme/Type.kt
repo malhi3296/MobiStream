@@ -8,12 +8,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-// Google Font Inter downloaded locally to res/font/inter.ttf
+// Bundled local Google Font Inter with system sans-serif fallback behavior via Compose FontFamily
 val InterFontFamily = FontFamily(
     Font(R.font.inter, FontWeight.Normal),
     Font(R.font.inter, FontWeight.Medium),
     Font(R.font.inter, FontWeight.SemiBold),
-    Font(R.font.inter, FontWeight.Bold)
+    Font(R.font.inter, FontWeight.Bold),
+    Font(R.font.inter, FontWeight.ExtraBold)
 )
 
 val AppTypography = Typography(
